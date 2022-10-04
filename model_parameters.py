@@ -10,13 +10,13 @@ class model_parameters(object):
         """
         # simulation parameters
         self.number_events = 12
-        self.number_repeats = 4
+        self.number_repeats = 1 ###### number of sims, parallelisation relevant. Can be changed - usually 4 cores, my laptop 8 cores
         self.number_pathogens = 2
         self.number_compartments = 7
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 365.25 * 10
+        self.time_day_end = 100 * 1 #Set to 500 days (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:

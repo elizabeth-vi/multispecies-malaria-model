@@ -47,7 +47,7 @@ FSAT_vec = [False]
 it_dict["etaFSAT"] = [0, 0]
 it_dict["etaMDA"] = [0, 0]
 
-in_parallel = True
+in_parallel = False
 
 if __name__ == '__main__':
     for prov_name in prov_list_epidemics:

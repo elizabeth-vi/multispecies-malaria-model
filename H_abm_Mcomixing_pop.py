@@ -290,7 +290,13 @@ class Run_Simulations(object):
 
         # iterate through time
         mozzie_model = anophs.model
+
+        print('range is 1 to '+str(self.params.time_end))
         for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
+
+            if t%25==0:
+                print(t)
+
             if self.params.FSAT == True:
                 possible_detections = human_pop_pf_history[t - 1][1] + human_pop_pf_history[t - 1][2] + \
                                       human_pop_pv_history[t - 1][1] + human_pop_pv_history[t - 1][2] - \
@@ -310,6 +316,7 @@ class Run_Simulations(object):
                              [0, 0, 0, 0],
                              [0, 0, 0, 0]]
             agent_death_counter = 0
+
             for human in humans:
 
                 prev_pf=human.state[Species.falciparum].current
@@ -523,6 +530,8 @@ class Run_Simulations(object):
 
         num_TGD = (num_entangled_T, num_entangled_G, entangled_T_pf, entangled_T_pv, entangled_G_pf, entangled_G_pv, num_simultaneous_T, num_simultaneous_G, num_sim_diff_treat, num_deaths, double_count_deaths, deaths_owing, false_T_deaths, false_G_deaths, false_I_deaths, death_count_matrix)
 
+        print('testend')
+
         return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, humans, anophs, num_TGD ### total T, G, death: added [9] ###
 
 # read parameters from calibrated values
@@ -544,7 +553,7 @@ def use_calibrated_params(prov):
 
 def convert(o):
     """ from: https://stackoverflow.com/questions/11942364/typeerror-integer-is-not-json-serializable-when-serializing-json-in-python"""
-    if isinstance(o, np.int64): return int(o)
+    if isinstance(o, np.generic): return int(o)
     raise TypeError
 
 def do_iterate(params, it_dict, prov_name, in_parallel):
