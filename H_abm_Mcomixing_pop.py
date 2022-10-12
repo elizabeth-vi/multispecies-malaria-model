@@ -27,6 +27,7 @@ class Run_Simulations(object):
         calibrated_params.update(**kwargs)
         self.params = model_parameters(**calibrated_params)
         self.infectious_compartment_list = [Compartments.I, Compartments.A, Compartments.T, Compartments.G]
+        self.comps_infected_untreated = [Compartments.I, Compartments.A, Compartments.L]
 
     def count_agents(self, people, compartment):
         num_pfs = 0
@@ -175,14 +176,34 @@ class Run_Simulations(object):
         assignT = (initial_human_population_counts[Species.falciparum][Compartments.T] + initial_human_population_counts[Species.vivax][Compartments.T]) / 2
         for pf_comp in compartments:
             for pv_comp in compartments:
-                if self.params.flag_entangled_treatment == 1 and pf_comp == Compartments.T and pv_comp == Compartments.T:
-                    assign = assignT
-                elif self.params.flag_entangled_treatment == 1 and (pf_comp == Compartments.T or pv_comp == Compartments.T):
-                    assign = 0  # all treatments are entangled
-                else:
-                    assign = initial_human_population_counts[Species.falciparum][pf_comp] * initial_human_population_counts[Species.vivax][pv_comp] / self.params.human_population
+                assign = initial_human_population_counts[Species.falciparum][pf_comp] * initial_human_population_counts[Species.vivax][pv_comp] / self.params.human_population
+                
+                if self.params.flag_entangled_treatment == 1 and (pf_comp == Compartments.T or pv_comp == Compartments.T):
+                    if pf_comp in self.comps_infected_untreated or pv_comp in self.comps_infected_untreated:
+                        assign = 0 # all treatments are entangled
+                    elif pf_comp == Compartments.T and pv_comp == Compartments.T:
+                        #Add entangled treatments for non-treated infectious classes
+                        
+                        #For untreated p.v. infections - P.f. treated with ACT, p.v. in (I,A,L)
+                        assign += initial_human_population_counts[Species.falciparum][pf_comp] * sum([initial_human_population_counts[Species.vivax][comp] for comp in self.comps_infected_untreated]) / self.params.human_population
+                        #For untreated p.f. infections - p.v. treated with ACT, p.f. in (I,A,L)
+                        assign += initial_human_population_counts[Species.vivax][pf_comp] * sum([initial_human_population_counts[Species.falciparum][comp] for comp in self.comps_infected_untreated]) / self.params.human_population
+
+                #Radical cure treatment supersedes ACT treatment. Entangled treatment means (I,A,L,T) x G cannot exist
+                if self.params.flag_entangled_treatment == 1 and (pf_comp == Compartments.G or pv_comp == Compartments.G):
+                    if pf_comp in self.comps_infected_untreated+[Compartments.T] or pv_comp in self.comps_infected_untreated+[Compartments.T]:
+                        assign = 0 # all treatments are entangled
+                    elif pf_comp == Compartments.G and pv_comp == Compartments.G:
+                        #Add entangled treatments for non-treated infectious classes
+                        
+                        #For untreated p.v. infections - P.f. treated with radical cure, p.v. in (I,A,L,T)
+                        assign += initial_human_population_counts[Species.falciparum][pf_comp] * sum([initial_human_population_counts[Species.vivax][comp] for comp in self.comps_infected_untreated + [Compartments.T]]) / self.params.human_population
+                        #For untreated p.f. infections - p.v. treated with radical cure, p.f. in (I,A,L,T)
+                        assign += initial_human_population_counts[Species.vivax][pf_comp] * sum([initial_human_population_counts[Species.falciparum][comp] for comp in self.comps_infected_untreated + [Compartments.T]]) / self.params.human_population
+
 
                 matrix_human_pops[pf_comp][pv_comp] = int(round(assign))  # divide by two as for deterministic model used to generate these ICs, the population is independently represented for pf and pv, meaning twice the population when allocated this way.
+                #Elizabeth edit to above: the matrix sums to human_population. When allocated to pv_pops and pf_pops, each list also sums to human_population.
 
         pop_diff = self.params.human_population - np.sum(np.sum(matrix_human_pops))
         matrix_human_pops[0][0] = max(0, matrix_human_pops[0][0] + pop_diff)
@@ -192,9 +213,13 @@ class Run_Simulations(object):
 
         pv_pops = list(np.sum(matrix_human_pops, axis=0))
         pf_pops = list(np.sum(matrix_human_pops, axis=1))
+        print("PF: \n",pf_pops,"\n")
         assert pf_pops[Compartments.L] == 0
         human_population_counts = [pf_pops, pv_pops]
 
+        print(matrix_human_pops)#################
+        print(np.sum(matrix_human_pops))
+        ##quit() #############################
         return matrix_human_pops, mixed_infection_pops, human_population_counts
 
     def calculate_mixed_only(self, human_initial_mixed, diseases):
@@ -444,11 +469,12 @@ class Run_Simulations(object):
                     self.process_death(diseases=diseases, person=human)
 
                 # entangled treatment logic (sends people with infection to treatment states)
+                
                 if self.params.flag_entangled_treatment == 1:
-                    if (human.state[Species.falciparum].current == Compartments.T and (human.state[Species.vivax].current == Compartments.I or human.state[Species.vivax].current == Compartments.A or human.state[Species.vivax].current == Compartments.L)) or (human.state[Species.vivax].current == Compartments.T and (human.state[Species.falciparum].current == Compartments.I or human.state[Species.falciparum].current == Compartments.A)):
+                    if (human.state[Species.falciparum].current == Compartments.T and (human.state[Species.vivax].current in self.comps_infected_untreated)) or (human.state[Species.vivax].current == Compartments.T and (human.state[Species.falciparum].current in self.comps_infected_untreated)):
                         # entangled treatment counters
                         num_entangled_T += 1
-                        if (human.state[Species.falciparum].current == Compartments.T and (human.state[Species.vivax].current == Compartments.I or human.state[Species.vivax].current == Compartments.A or human.state[Species.vivax].current == Compartments.L)):
+                        if (human.state[Species.falciparum].current == Compartments.T):
                             # T entanglement of pv
                             entangled_T_pv += 1
                             # log overridden deaths
@@ -464,10 +490,10 @@ class Run_Simulations(object):
                                 false_I_deaths[Species.falciparum].append(human.state[Species.falciparum].time)
                         # update agent state
                         self.process_treatment_entanglement(diseases=diseases, person=human, current_time=t, event_rates=current_event_rates, params=self.params)
-                    elif (human.state[Species.falciparum].current == Compartments.G and (human.state[Species.vivax].current == Compartments.I or human.state[Species.vivax].current == Compartments.A or human.state[Species.vivax].current == Compartments.L)) or (human.state[Species.vivax].current == Compartments.G and (human.state[Species.falciparum].current == Compartments.I or human.state[Species.falciparum].current == Compartments.A)):
+                    elif (human.state[Species.falciparum].current == Compartments.G and (human.state[Species.vivax].current in self.comps_infected_untreated)) or (human.state[Species.vivax].current == Compartments.G and (human.state[Species.falciparum].current in self.comps_infected_untreated)):
                         # entangled treatment counters
                         num_entangled_G += 1
-                        if (human.state[Species.falciparum].current == Compartments.G and (human.state[Species.vivax].current == Compartments.I or human.state[Species.vivax].current == Compartments.A or human.state[Species.vivax].current == Compartments.L)):
+                        if (human.state[Species.falciparum].current == Compartments.G):
                             # G entanglement of pv
                             entangled_G_pv += 1
                             # log overridden deaths

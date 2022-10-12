@@ -16,7 +16,7 @@ class model_parameters(object):
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 100 * 1 #Set to 500 days (previously 10 years)
+        self.time_day_end = 365.25 * 1 #Set to 1 year (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
