@@ -5,7 +5,7 @@
                 70000,#R immune
                 0,#L latent
                 1000,#T treatment
-                0,#RC
+                0,#G (RC)
                 0,#just died??
                 0,#dead??
                 0,#I mixed??
@@ -16,7 +16,7 @@
                 0,#RC mixed??
                 27000,#mosquitoes susceptible
                 3000,#E exposed
-                3000#Y infectious
+                3000 #Y infectious
             ],
             [
                 51000,#p.v. susceptible

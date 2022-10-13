@@ -69,7 +69,7 @@ class Run_Simulations(object):
         assert self.params.flag_entangled_treatment == 1
 
         # identify the species to update
-        if person.state[Species.falciparum].current == Compartments.T and person.state[Species.vivax].current != Compartments.T:
+        if person.state[Species.falciparum].current == Compartments.T: #redundant: and person.state[Species.vivax].current != Compartments.T:
             sp = Species.vivax
         else:
             sp = Species.falciparum
@@ -89,7 +89,7 @@ class Run_Simulations(object):
         assert self.params.flag_entangled_treatment == 1
 
         # identify the species to update
-        if person.state[Species.falciparum].current == Compartments.G and person.state[Species.vivax].current != Compartments.G:
+        if person.state[Species.falciparum].current == Compartments.G: #redundant: and person.state[Species.vivax].current != Compartments.G:
             sp = Species.vivax
         else:
             sp = Species.falciparum
@@ -99,25 +99,27 @@ class Run_Simulations(object):
         person.state[sp].current = Compartments.G  # change to Treatment status
         diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
 
-    def mixed_infection_event(self, diseases, person, current_time, event_rates,params):
-        """
-        If treatment entanglement is on, need to update the status of the other species
-        :param diseases:
-        :param person:
-        :return:
-        """
-        assert self.params.flag_entangled_treatment == 1
 
-        # identify the species to update
-        if person.state[Species.falciparum].current == Compartments.T and person.state[Species.vivax].current != Compartments.T:
-            sp = Species.vivax
-        else:
-            sp = Species.falciparum
+    # def mixed_infection_event(self, diseases, person, current_time, event_rates,params):
+    #     """
+    #     If treatment entanglement is on, need to update the status of the other species
+    #     :param diseases:
+    #     :param person:
+    #     :return:
+    #     """
+    #     assert self.params.flag_entangled_treatment == 1
 
-        diseases[sp].pop_counts[person.state[sp].current] -= 1  # decrement current compartment count
-        diseases[sp].pop_counts[Compartments.T] += 1 # increment treatment compartment count
-        person.state[sp].current = Compartments.T  # change to Treatment status
-        diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
+    #     # identify the species to update
+    #     if person.state[Species.falciparum].current == Compartments.T and person.state[Species.vivax].current != Compartments.T:
+    #         sp = Species.vivax
+    #     else:
+    #         sp = Species.falciparum
+
+    #     diseases[sp].pop_counts[person.state[sp].current] -= 1  # decrement current compartment count
+    #     diseases[sp].pop_counts[Compartments.T] += 1 # increment treatment compartment count
+    #     person.state[sp].current = Compartments.T  # change to Treatment status
+    #     diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
+
 
     def initialise_agent_compartments(self, rates, diseases, anophs, humans, human_initial_counts):
         """
@@ -214,6 +216,7 @@ class Run_Simulations(object):
         pv_pops = list(np.sum(matrix_human_pops, axis=0))
         pf_pops = list(np.sum(matrix_human_pops, axis=1))
         print("PF: \n",pf_pops,"\n")
+        print("PV: \n",pv_pops,"\n")
         assert pf_pops[Compartments.L] == 0
         human_population_counts = [pf_pops, pv_pops]
 
@@ -319,6 +322,9 @@ class Run_Simulations(object):
         print('range is 1 to '+str(self.params.time_end))
         for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
 
+            if t==1:
+                print("Quitting for testing purposes, line 324)")
+                quit()
             if t%25==0:
                 print(t)
 

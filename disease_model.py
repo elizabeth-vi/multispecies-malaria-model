@@ -58,7 +58,7 @@ class Disease(object):
                 time_mda = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.A_treat])
 
             # if transition before mda or treatment progress
-            if time_next < time_treat and time_next<time_mda:
+            if time_next < time_treat and time_next < time_mda:
                 _time = time_next
                 if random.random() < params.pI[self.species]:  # malaria death
                     self.I_deaths.append(_time)
@@ -84,7 +84,7 @@ class Disease(object):
                 _time = time_mda
 
                 # MASKING LOGIC
-                if (person.state[Species.falciparum].current == Compartments.I or person.state[Species.falciparum].current == Compartments.A) and (person.state[Species.vivax].current == Compartments.I or person.state[Species.vivax].current == Compartments.A): #if mixed infection masking is possible
+                if (person.state[Species.falciparum].current in [Compartments.I, Compartments.A]) and (person.state[Species.vivax].current in [Compartments.I, Compartments.A]): #if mixed infection masking is possible
                     if random.random() < params.mask_prob_mda: # treat with prob treat with T given masking may occur
                         _next = Compartments.T
                     else: # if masking doesn't happen treat as usual
@@ -215,7 +215,7 @@ class Disease(object):
         current_compartment = person.state[self.species].current
 
         if person.state[self.species].time == current_time:  # an event has been scheduled for this time
-            assert current_compartment != Compartments.dead or person.state[self.species].current != Compartments.just_died
+            assert current_compartment not in [Compartments.dead, Compartments.just_died]
             # decrement population count for current state
 
             self.pop_counts[current_compartment] -= 1
@@ -223,7 +223,7 @@ class Disease(object):
 
             self.pop_counts[person.state[self.species].next] += 1
 
-            if current_compartment == Compartments.L and (person.state[self.species].next == Compartments.I or person.state[self.species].next == Compartments.A):
+            if current_compartment == Compartments.L and (person.state[self.species].next in [Compartments.I, Compartments.A]):
                 self.relapses.append(current_time)  # record relapse event -- here and not in self.update as a new infection may occur in the meantime
 
             # add triggering logic (triggering occurs after a pf recovery)
