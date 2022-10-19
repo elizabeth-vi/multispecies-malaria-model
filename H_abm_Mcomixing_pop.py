@@ -175,7 +175,6 @@ class Run_Simulations(object):
 
         matrix_human_pops = [[0 for idx in range(num_comps)] for idx in range(num_comps)]
 
-        assignT = (initial_human_population_counts[Species.falciparum][Compartments.T] + initial_human_population_counts[Species.vivax][Compartments.T]) / 2
         for pf_comp in compartments:
             for pv_comp in compartments:
                 assign = initial_human_population_counts[Species.falciparum][pf_comp] * initial_human_population_counts[Species.vivax][pv_comp] / self.params.human_population
@@ -209,6 +208,7 @@ class Run_Simulations(object):
 
         pop_diff = self.params.human_population - np.sum(np.sum(matrix_human_pops))
         matrix_human_pops[0][0] = max(0, matrix_human_pops[0][0] + pop_diff)
+        print("pop_diff = ",pop_diff)
 
         infection_compartments = [Compartments.I, Compartments.A, Compartments.T, Compartments.G]
         mixed_infection_pops = [[matrix_human_pops[v_idx][f_idx] for f_idx in infection_compartments] for v_idx in infection_compartments]
