@@ -19,8 +19,8 @@ from model_parameters import model_parameters
 
 class Run_Simulations(object):
 
-    def __init__(self, prov_name, **kwargs):
-        calibrated_params, self.ics = use_calibrated_params(prov=prov_name)
+    def __init__(self, prov_name, prov_file, **kwargs):
+        calibrated_params, self.ics = use_calibrated_params(prov=prov_name, file=prov_file)
 
         self.prov_name = prov_name
 
@@ -222,7 +222,7 @@ class Run_Simulations(object):
 
         print(matrix_human_pops)#################
         print(np.sum(matrix_human_pops))
-        ##quit() #############################
+
         return matrix_human_pops, mixed_infection_pops, human_population_counts
 
     def calculate_mixed_only(self, human_initial_mixed, diseases):
@@ -322,7 +322,8 @@ class Run_Simulations(object):
         print('range is 1 to '+str(self.params.time_end))
         for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
 
-            if t==1:
+            if t==2:
+                print("\nt = "+str(t))
                 print("Quitting for testing purposes, line 324)")
                 quit()
             if t%25==0:
@@ -567,12 +568,12 @@ class Run_Simulations(object):
         return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, humans, anophs, num_TGD ### total T, G, death: added [9] ###
 
 # read parameters from calibrated values
-def use_calibrated_params(prov):
+def use_calibrated_params(prov,file):
 
     params = dict()
 
     # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-    with open('./stored/sorted_calibrated_params2.json') as json_file:
+    with open(file) as json_file:
         json_data = json.load(json_file)
 
     for keys in json_data[prov]:
@@ -585,10 +586,11 @@ def use_calibrated_params(prov):
 
 def convert(o):
     """ from: https://stackoverflow.com/questions/11942364/typeerror-integer-is-not-json-serializable-when-serializing-json-in-python"""
+    #change from np.int64 to np.generic to allow for np.int32 
     if isinstance(o, np.generic): return int(o)
     raise TypeError
 
-def do_iterate(params, it_dict, prov_name, in_parallel):
+def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
     print('beginning a stochastic run')
 
     max_values_f = []
@@ -614,7 +616,7 @@ def do_iterate(params, it_dict, prov_name, in_parallel):
     # parallelised
     if in_parallel==False:
         start = time.time()
-        for f in [Run_Simulations(prov_name, **it_dict).run_me(x) for x in range(params.number_repeats)]:
+        for f in [Run_Simulations(prov_name, prov_file, **it_dict).run_me(x) for x in range(params.number_repeats)]:
 
             human_pf.append(f[0])
             human_pv.append(f[1])
@@ -633,7 +635,7 @@ def do_iterate(params, it_dict, prov_name, in_parallel):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
 
-            results_test = executor.map(Run_Simulations(prov_name, **it_dict).run_me, range(params.number_repeats))
+            results_test = executor.map(Run_Simulations(prov_name, prov_file, **it_dict).run_me, range(params.number_repeats))
 
             for f in results_test:
                 human_pf.append(f[0])

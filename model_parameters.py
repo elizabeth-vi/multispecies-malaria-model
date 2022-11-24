@@ -2,6 +2,8 @@ from index_names import Species, Compartments
 import json
 import numpy as np
 
+days_in_year = 365.25
+
 class model_parameters(object):
     def __init__(self, **kwargs):
         """
@@ -10,18 +12,21 @@ class model_parameters(object):
         """
         # simulation parameters
         self.number_events = 12
-        self.number_repeats = 1 ###### number of sims, parallelisation relevant. Can be changed - usually 4 cores, my laptop 8 cores
+        self.number_repeats = 4 ###### number of sims, parallelisation relevant
         self.number_pathogens = 2
         self.number_compartments = 7
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 365.25 * 1 #Set to 1 year (previously 10 years)
+        self.time_day_end = 3 * days_in_year #Set to 3 year (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
             self.time_day_step =1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
         self.time_vec = np.arange(start=self.time_day_start, stop=self.time_day_end, step=self.time_day_step)
+
+        #Added for p. vivax-only research
+        self.time_treatment_changes = np.array([0, 4, 8])*days_in_year
 
         # convert time to units of time_day_step
         self.time_start = int(round(self.time_day_start / self.time_day_step))
@@ -33,7 +38,7 @@ class model_parameters(object):
 
         self.human_population = 1000
         self.mozzie_human_pop_ratio = 3  # i.e. number of mosquitoes for each human
-        self.period = 365.25
+        self.period = days_in_year
 
         # transmission model parameters
 

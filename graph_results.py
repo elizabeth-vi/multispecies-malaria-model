@@ -8,7 +8,7 @@ from operator import add
 plt.close("all")
 #plt.ion()
 
-filepath = "C:\\Users\eliza\Desktop\RA\multispecies-malaria-model\stored\entangled_treatmentExample_Province_all_pN1.0_0.843_scenario0.json"
+filepath = "/Users/elizabeth/Desktop/RA/multispecies-malaria-model/stored/entangled_treatmentExample_Province_all_pN1.0_0.843_scenario0.json"
 
 dictionary = json.load(open(filepath, 'r'))
 
@@ -46,12 +46,12 @@ if plot_selected:
     #"""
     
     #Plot p.f.
-    plt.figure()
-    plt.grid(True)
-    plt.plot(times,pf_only_data, color='maroon')
-    plt.xlabel('time')
-    plt.ylabel('Infections')
-    plt.title('Human p.f. infections (I and A)')
+    # plt.figure()
+    # plt.grid(True)
+    # plt.plot(times,pf_only_data, color='maroon')
+    # plt.xlabel('time')
+    # plt.ylabel('Infections')
+    # plt.title('Human p.f. infections (I and A)')
     
     #Plot p.v.
     plt.figure()

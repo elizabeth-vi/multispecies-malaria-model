@@ -28,6 +28,7 @@ it_dict["zf"] = 3.5
 import gc
 
 ########################### for user to change #################################
+prov_file= './stored/sorted_calibrated_params2.json'
 prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calibrated_params2.json
 
 p_mask = 0.50
@@ -51,7 +52,7 @@ in_parallel = False
 
 if __name__ == '__main__':
     for prov_name in prov_list_epidemics:
-        calibrated_params, ics = sim_codes.use_calibrated_params(prov=prov_name)
+        calibrated_params, ics = sim_codes.use_calibrated_params(prov=prov_name,file=prov_file)
         params = model_parameters(**calibrated_params)
 
         for iterate1 in range(len(pN_vec)):
@@ -64,8 +65,9 @@ if __name__ == '__main__':
             it_dict["pG"] = pG_vec[iterate1]
 
             for iterate2 in range(len(c_vec)):
-                it_dict["etaFSAT"] = [0, 0]
-                it_dict["etaMDA"] = [0, 0]
+                #it_dict["etaFSAT"] = [0, 0]
+                #it_dict["etaMDA"] = [0, 0]
+
                 # coverage scenarios
                 it_dict["scenario"]=iterate2
                 it_dict["mda_t1"] = mda1[iterate2]
@@ -93,5 +95,5 @@ if __name__ == '__main__':
                 it_dict["pN_mda"] = pN_mda_vec[iterate1][iterate2]
                 it_dict["mask_prob_mda"] = p_mask * pN_mda_vec[iterate1][iterate2][0] + (1 - p_mask) * pN_mda_vec[iterate1][iterate2][1]
                 it_dict["c"] = [c_vec[iterate2][0], c_vec[iterate2][1]]
-                sim_codes.do_iterate(params, it_dict, prov_name, in_parallel)
+                sim_codes.do_iterate(params, it_dict, prov_name, prov_file, in_parallel)
                 gc.collect()
