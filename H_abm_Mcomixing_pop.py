@@ -15,17 +15,17 @@ from index_names import Species, Compartments, Mozzie_labels
 from disease_model import Disease
 from mosquito_model import Mozzies
 from human_agents import Agent
-from model_parameters import model_parameters
+from model_params import model_params ####necessary? Try without
 
 class Run_Simulations(object):
 
     def __init__(self, prov_name, prov_file, **kwargs):
-        calibrated_params, self.ics = use_calibrated_params(prov=prov_name, file=prov_file)
+        calibrated_params, self.ics = model_params.use_calibrated_params(prov=prov_name, file=prov_file)
 
         self.prov_name = prov_name
 
         calibrated_params.update(**kwargs)
-        self.params = model_parameters(**calibrated_params)
+        self.params = model_params(**calibrated_params)
         self.infectious_compartment_list = [Compartments.I, Compartments.A, Compartments.T, Compartments.G]
         self.comps_infected_untreated = [Compartments.I, Compartments.A, Compartments.L]
 
@@ -567,22 +567,22 @@ class Run_Simulations(object):
 
         return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, humans, anophs, num_TGD ### total T, G, death: added [9] ###
 
-# read parameters from calibrated values
-def use_calibrated_params(prov,file):
+# # read parameters from calibrated values
+# def use_calibrated_params(prov,file):
 
-    params = dict()
+#     params = dict()
 
-    # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-    with open(file) as json_file:
-        json_data = json.load(json_file)
+#     # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
+#     with open(file) as json_file:
+#         json_data = json.load(json_file)
 
-    for keys in json_data[prov]:
-        params[keys] = json_data[prov][keys]
+#     for keys in json_data[prov]:
+#         params[keys] = json_data[prov][keys]
 
-    ics = params['ics']
-    del params['ics']
+#     ics = params['ics']
+#     del params['ics']
 
-    return params, ics
+#     return params, ics
 
 def convert(o):
     """ from: https://stackoverflow.com/questions/11942364/typeerror-integer-is-not-json-serializable-when-serializing-json-in-python"""
@@ -617,7 +617,7 @@ def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
     if in_parallel==False:
         start = time.time()
         for f in [Run_Simulations(prov_name, prov_file, **it_dict).run_me(x) for x in range(params.number_repeats)]:
-
+            
             human_pf.append(f[0])
             human_pv.append(f[1])
             human_mixed_infectious.append(f[2])

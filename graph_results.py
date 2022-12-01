@@ -2,7 +2,7 @@ from pyexpat import model
 import matplotlib.pyplot as plt
 import json
 import numpy as np
-from model_parameters import model_parameters
+from model_params import model_params
 from operator import add
 
 plt.close("all")

@@ -1,16 +1,19 @@
-import sys
-import path as Path
+#For parameters related to code (e.g. timestep) and calculated 
 
-# directory reach
-directory = Path.Path(__file__).abspath()
+# import sys
+# import path as Path
+
+# # directory reach
+# directory = Path.Path(__file__).abspath()
  
-# setting path
-sys.path.append(directory.parent.parent)
+# # setting path
+# sys.path.append(directory.parent.parent)
  
 
 from index_names import Species, Compartments
 import json
 import numpy as np
+from parameter_values import *
 
 days_in_year = 365.25
 
@@ -208,56 +211,147 @@ class model_params(object):
 
         return human_initial_inf, human_initial_mixed_only, mozzie_initial_inf, human_initial_inf_comp_x_only, human_initial_mixed_all, initial_human_population_counts, initial_mozzie, initial_human_combo_counts
 
-class model_ranges(object):
-    def __init__(self, **kwargs):
+    # read parameters from calibrated values
+    def use_calibrated_params(prov,file):
 
-        if 'time_day_step' in kwargs:
-            self.time_day_step = kwargs['time_day_step']
-        else:
-            self.time_day_step = 1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
+        params = dict()
 
-        # update default values with preference to user-specified ones
-        args = self.defaults()
-        args.update(kwargs)
-
-        for key, value in args.items():
-            self.__setattr__(key, value)
-
-        # setting the falciparum values to zero to prevent the `L` compartment being used
-        self.kappa = [0.0, self.kappa]
-        self.nu = [0.0, self.nu]
-        self.pA = [0.0, self.pA]
-        self.ph = [0.0, self.ph]
-        self.pL = [0.0, self.pL]
-        self.pP = [0.0, self.pP]
-        # setting all malaria induced deaths of the other species to zero and get results matching deteterministic model -- for debugging only!
-        self.pI = [0.0, 0.0]
-        self.pT = [0.0, 0.0]
-        self.pG = [0.0, 0.0]
-
-    def defaults(self, filename=r"parameter_ranges.json"):
-        """
-        Pull out default values from a file in json format.
-        :param filename: json file containing default parameter values, which can be overridden by user specified values
-        :return:
-        """
-        with open(filename) as json_file:
+        # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
+        with open(file) as json_file:
             json_data = json.load(json_file)
 
-        for key, value in json_data.items():
-            # if this is a rate, multiply by `time_day_step`
-            _tmp = value["exp"]
-            _tmp_max = value["max"]
-            _tmp_min = value["min"]
-            if type(_tmp) == list:
-                _tmp_var = [0.01 * _tmp[idx] for idx in range(len(_tmp))] #[max(max(_tmp_max[idx]-_tmp[idx], _tmp[idx]-_tmp_min[idx]), 0.01 * _tmp[idx]) for idx in range(len(_tmp))]
-            else:
-                _tmp_var = 0.01 * _tmp #max(max(_tmp_max - _tmp, _tmp - _tmp_min), 0.01 * _tmp)
+        for keys in json_data[prov]:
+            params[keys] = json_data[prov][keys]
 
-            if value["units"] == "per day":
-                if type(_tmp) == list:
-                    _tmp_var = [_tmp_var[idx] * self.time_day_step for idx in range(len(_tmp_var))]
-                else:
-                    _tmp_var = _tmp_var * self.time_day_step
-            json_data[key] = _tmp_var
-        return json_data
+        ics = params['ics']
+        del params['ics']
+
+        return params, ics
+
+    def initialise_dict():
+        it_dict = {'flag_entangled_treatment': 1}
+        it_dict["flag_triggering_by_pf"] = 1
+        it_dict["zf"] = 3.5
+
+        it_dict["eta"] = [0, 0]
+
+        it_dict["etaFSAT"] = [0, 0]
+        it_dict["etaMDA"] = [0, 0]
+
+        return it_dict
+
+    def update_dict(params, it_dict, i1, i2):
+
+        mask_prob = p_mask * pN_vec[i1][0] + (1 - p_mask) * pN_vec[i1][1]
+        it_dict["pN"] = pN_vec[i1]
+        it_dict["mask_prob"] = mask_prob
+        it_dict["pP"] = pP_vec[i1]
+        it_dict["pG"] = pG_vec[i1]
+
+        #it_dict["etaFSAT"] = [0, 0]
+        #it_dict["etaMDA"] = [0, 0]
+
+        # coverage scenarios
+        it_dict["scenario"]=i2
+        it_dict["mda_t1"] = mda1[i2]
+        it_dict["mda_t2"] = mda2[i2]
+
+        if MDA_vec[i2] == True:
+            it_dict["MDA"] = True
+            it_dict["etaMDA"] = [-math.log(1 - mda_coverage[i2]) / (mda2[i2] - mda1[i2]), -math.log(1 - mda_coverage[i2]) / (mda2[i2] - mda1[i2])]
+        else:
+            it_dict["MDA"] = False
+            it_dict["etaMDA"] = [0, 0]
+
+        if FSAT_vec[i2] == True:
+            it_dict["FSAT"]=True
+            it_dict["FSAT_period"] = 7
+            it_dict["FSAT_exp_find"] = 10
+            it_dict["localisation"] = 0.4
+        else:
+            it_dict["FSAT"] = False
+            it_dict["etaFSAT"] = [0, 0]
+            it_dict["FSAT_period"] = 7
+            it_dict["FSAT_exp_find"] = 0
+            it_dict["localisation"] = 0.4
+
+
+        it_dict["pN_mda"] = pN_mda_vec[i1][i2]
+        it_dict["mask_prob_mda"] = p_mask * pN_mda_vec[i1][i2][0] + (1 - p_mask) * pN_mda_vec[i1][i2][1]
+        it_dict["c"] = [c_vec[i2][0], c_vec[i2][1]]
+
+
+        return it_dict
+
+    # read parameters from calibrated values
+    def use_calibrated_params(prov,file):
+
+        params = dict()
+
+        # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
+        with open(file) as json_file:
+            json_data = json.load(json_file)
+
+        for keys in json_data[prov]:
+            params[keys] = json_data[prov][keys]
+
+        ics = params['ics']
+        del params['ics']
+
+        return params, ics
+
+# class model_ranges(object):
+#     def __init__(self, **kwargs):
+
+#         if 'time_day_step' in kwargs:
+#             self.time_day_step = kwargs['time_day_step']
+#         else:
+#             self.time_day_step = 1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
+
+#         # update default values with preference to user-specified ones
+#         args = self.defaults()
+#         args.update(kwargs)
+
+#         for key, value in args.items():
+#             self.__setattr__(key, value)
+
+#         # setting the falciparum values to zero to prevent the `L` compartment being used
+#         self.kappa = [0.0, self.kappa]
+#         self.nu = [0.0, self.nu]
+#         self.pA = [0.0, self.pA]
+#         self.ph = [0.0, self.ph]
+#         self.pL = [0.0, self.pL]
+#         self.pP = [0.0, self.pP]
+#         # setting all malaria induced deaths of the other species to zero and get results matching deteterministic model -- for debugging only!
+#         self.pI = [0.0, 0.0]
+#         self.pT = [0.0, 0.0]
+#         self.pG = [0.0, 0.0]
+
+#     def defaults(self, filename=r"parameter_ranges.json"):
+#         """
+#         Pull out default values from a file in json format.
+#         :param filename: json file containing default parameter values, which can be overridden by user specified values
+#         :return:
+#         """
+#         with open(filename) as json_file:
+#             json_data = json.load(json_file)
+
+#         for key, value in json_data.items():
+#             # if this is a rate, multiply by `time_day_step`
+#             _tmp = value["exp"]
+#             _tmp_max = value["max"]
+#             _tmp_min = value["min"]
+#             if type(_tmp) == list:
+#                 _tmp_var = [0.01 * _tmp[idx] for idx in range(len(_tmp))] #[max(max(_tmp_max[idx]-_tmp[idx], _tmp[idx]-_tmp_min[idx]), 0.01 * _tmp[idx]) for idx in range(len(_tmp))]
+#             else:
+#                 _tmp_var = 0.01 * _tmp #max(max(_tmp_max - _tmp, _tmp - _tmp_min), 0.01 * _tmp)
+
+#             if value["units"] == "per day":
+#                 if type(_tmp) == list:
+#                     _tmp_var = [_tmp_var[idx] * self.time_day_step for idx in range(len(_tmp_var))]
+#                 else:
+#                     _tmp_var = _tmp_var * self.time_day_step
+#             json_data[key] = _tmp_var
+#         return json_data
+
+
