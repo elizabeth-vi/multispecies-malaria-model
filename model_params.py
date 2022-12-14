@@ -14,6 +14,7 @@ from index_names import Species, Compartments
 import json
 import numpy as np
 from parameter_values import *
+import math
 
 days_in_year = 365.25
 
@@ -31,15 +32,16 @@ class model_params(object):
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 3 * days_in_year #Set to 3 year (previously 10 years)
+        self.time_day_end = 3 * days_in_year #Set to 3 years (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
             self.time_day_step =1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
         self.time_vec = np.arange(start=self.time_day_start, stop=self.time_day_end, step=self.time_day_step)
 
-        #Added for p. vivax-only research
-        self.time_treatment_changes = np.array([0, 4, 8])*days_in_year
+        #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
+        #self.time_treatment_changes = np.array([0, 4, 8])*days_in_year / self.time_day_step
+        self.time_treatment_changes = [int(round(change_year * days_in_year / self.time_day_step)) for change_year in [0, 4, 8]]
 
         # convert time to units of time_day_step
         self.time_start = int(round(self.time_day_start / self.time_day_step))
@@ -212,21 +214,21 @@ class model_params(object):
         return human_initial_inf, human_initial_mixed_only, mozzie_initial_inf, human_initial_inf_comp_x_only, human_initial_mixed_all, initial_human_population_counts, initial_mozzie, initial_human_combo_counts
 
     # read parameters from calibrated values
-    def use_calibrated_params(prov,file):
+    # def use_calibrated_params(prov,file):
 
-        params = dict()
+    #     params = dict()
 
-        # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-        with open(file) as json_file:
-            json_data = json.load(json_file)
+    #     # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
+    #     with open(file) as json_file:
+    #         json_data = json.load(json_file)
 
-        for keys in json_data[prov]:
-            params[keys] = json_data[prov][keys]
+    #     for keys in json_data[prov]:
+    #         params[keys] = json_data[prov][keys]
 
-        ics = params['ics']
-        del params['ics']
+    #     ics = params['ics']
+    #     del params['ics']
 
-        return params, ics
+    #     return params, ics
 
     def initialise_dict():
         it_dict = {'flag_entangled_treatment': 1}
@@ -284,7 +286,7 @@ class model_params(object):
         return it_dict
 
     # read parameters from calibrated values
-    def use_calibrated_params(prov,file):
+    def use_calibrated_params(prov,file,treatment=None):
 
         params = dict()
 
@@ -294,6 +296,10 @@ class model_params(object):
 
         for keys in json_data[prov]:
             params[keys] = json_data[prov][keys]
+
+        if treatment:
+            for keys in json_data[treatment]:
+                params[keys] = json_data[treatment][keys] #treatment only applicable to p vivax
 
         ics = params['ics']
         del params['ics']

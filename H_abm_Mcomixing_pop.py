@@ -15,17 +15,18 @@ from index_names import Species, Compartments, Mozzie_labels
 from disease_model import Disease
 from mosquito_model import Mozzies
 from human_agents import Agent
-from model_params import model_params ####necessary? Try without
+#from model_params import model_params ####necessary? Try without
 
 class Run_Simulations(object):
 
-    def __init__(self, prov_name, prov_file, **kwargs):
-        calibrated_params, self.ics = model_params.use_calibrated_params(prov=prov_name, file=prov_file)
+    def __init__(self, params, it_dict, ics, prov_name, prov_file, **kwargs):
+        #calibrated_params, self.ics = model_params.use_calibrated_params(prov=prov_name, file=prov_file)
 
+        self.ics = ics
         self.prov_name = prov_name
-
-        calibrated_params.update(**kwargs)
-        self.params = model_params(**calibrated_params)
+        self.params = params
+        #calibrated_params.update(**kwargs)
+        #self.params = model_params(**calibrated_params)
         self.infectious_compartment_list = [Compartments.I, Compartments.A, Compartments.T, Compartments.G]
         self.comps_infected_untreated = [Compartments.I, Compartments.A, Compartments.L]
 
@@ -319,8 +320,18 @@ class Run_Simulations(object):
         # iterate through time
         mozzie_model = anophs.model
 
-        print('range is 1 to '+str(self.params.time_end))
-        for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
+
+        start=
+        for time_change in self.params.time_treatment_changes:
+            start = max(1,time_change)
+            end = 
+
+        
+        for t in range(start,end):  
+            print('range is '+str(start)+' to '+str(end))
+
+        # print('range is 1 to '+str(self.params.time_end))
+        # for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
 
             if t==2:
                 print("\nt = "+str(t))
@@ -590,7 +601,7 @@ def convert(o):
     if isinstance(o, np.generic): return int(o)
     raise TypeError
 
-def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
+def do_iterate(params, it_dict, ics, prov_name, prov_file, treatment_scenario, in_parallel):
     print('beginning a stochastic run')
 
     max_values_f = []
@@ -616,8 +627,8 @@ def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
     # parallelised
     if in_parallel==False:
         start = time.time()
-        for f in [Run_Simulations(prov_name, prov_file, **it_dict).run_me(x) for x in range(params.number_repeats)]:
-            
+        for f in [Run_Simulations(params, it_dict, ics, prov_name, prov_file, treatment_scenario, **it_dict).run_me(x) for x in range(params.number_repeats)]:
+
             human_pf.append(f[0])
             human_pv.append(f[1])
             human_mixed_infectious.append(f[2])
@@ -635,7 +646,7 @@ def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
 
-            results_test = executor.map(Run_Simulations(prov_name, prov_file, **it_dict).run_me, range(params.number_repeats))
+            results_test = executor.map(Run_Simulations(params, it_dict, ics, prov_name, prov_file, treatment_scenario, **it_dict).run_me, range(params.number_repeats))
 
             for f in results_test:
                 human_pf.append(f[0])
@@ -669,11 +680,18 @@ def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
         treatment_entangled = False
 
     if treatment_entangled == True:
-        with open(tangled_filename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_scenario" + str(it_dict["scenario"]) + ".json", 'w') as outfile:
+        with open(tangled_filename + '_' + prov_name + '_' + treatment_scenario + 'year' + '048'  + ".json", 'w') as outfile:
             json.dump(results, outfile, indent=4, default=convert)
     else:
-        with open(outfilename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+        with open(outfilename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
             json.dump(results, outfile, indent=4, default=convert)
+
+    # if treatment_entangled == True:
+    #     with open(tangled_filename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_scenario" + str(it_dict["scenario"]) + ".json", 'w') as outfile:
+    #         json.dump(results, outfile, indent=4, default=convert)
+    # else:
+    #     with open(outfilename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+    #         json.dump(results, outfile, indent=4, default=convert)
 
     # store interesting values
     max_values_f.append([list(x) for x in np.amax(human_pf, axis=0)])
@@ -686,8 +704,15 @@ def do_iterate(params, it_dict, prov_name, prov_file, in_parallel):
     iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict}
 
     if treatment_entangled == True:
-        with open(tangled_filename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+        with open(tangled_filename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
             json.dump(iterate_results, outfile, indent=4, default=convert)
     else:
-        with open(outfilename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+        with open(outfilename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
             json.dump(iterate_results, outfile, indent=4, default=convert)
+
+    # if treatment_entangled == True:
+    #     with open(tangled_filename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+    #         json.dump(iterate_results, outfile, indent=4, default=convert)
+    # else:
+    #     with open(outfilename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+    #         json.dump(iterate_results, outfile, indent=4, default=convert)

@@ -33,5 +33,14 @@
                 3000
             ]
         ]
+    },
+    "Primaquine_Lowdose": {
+        "pG_vec": [[0.0066, 0.000006]]
+    },
+    "Primaquine_Highdose": {
+        "pG_vec": [[0.0066, 0.000006]]
+    },
+    "Tafenoquine": {
+        "pG_vec": [[0.0066, 0.000006]]
     }
 }
