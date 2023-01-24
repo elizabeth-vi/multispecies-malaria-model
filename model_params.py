@@ -26,13 +26,13 @@ class model_params(object):
         """
         # simulation parameters
         self.number_events = 12
-        self.number_repeats = 4 ###### number of sims, parallelisation relevant
+        self.number_repeats = 1 ###### number of sims, parallelisation relevant
         self.number_pathogens = 2
         self.number_compartments = 7
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 3 * days_in_year #Set to 3 years (previously 10 years)
+        self.time_day_end = 1 * days_in_year #Set to 1 years (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
@@ -41,7 +41,7 @@ class model_params(object):
 
         #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
         #self.time_treatment_changes = np.array([0, 4, 8])*days_in_year / self.time_day_step
-        self.time_treatment_changes = [int(round(change_year * days_in_year / self.time_day_step)) for change_year in [0, 4, 8]]
+        self.time_treatment_changes = [int(round(change_year * days_in_year / self.time_day_step)) for change_year in [0, 0.5, 1]]
 
         # convert time to units of time_day_step
         self.time_start = int(round(self.time_day_start / self.time_day_step))
@@ -242,7 +242,23 @@ class model_params(object):
 
         return it_dict
 
-    def update_dict(params, it_dict, i1, i2):
+    def update_dict(it_dict, i1, i2):
+        #includes hard-coded parameter values: adjust
+
+        it_dict = dict(it_dict)
+
+        p_mask = 0.50
+        mda1 = [270.0]  # lower bound of when MDA occurs
+        mda2 = [270+30] # upper bound of when MDA occurs (i.e. 30 days of MDA)
+        c_vec = [[0.3, 0.3]] # coverage scenarios
+        pP_vec = [0.217]
+        pG_vec = [[0.0066, 0.000006]]
+        pN_vec = [[1.0, 0.843]] # treatment scenarios
+        mda_coverage = [0.5]
+        pN_mda_vec = [[[1.0, 0.843]]]
+
+        MDA_vec = [False]
+        FSAT_vec = [False] #focused screening and treatment
 
         mask_prob = p_mask * pN_vec[i1][0] + (1 - p_mask) * pN_vec[i1][1]
         it_dict["pN"] = pN_vec[i1]
@@ -286,20 +302,23 @@ class model_params(object):
         return it_dict
 
     # read parameters from calibrated values
-    def use_calibrated_params(prov,file,treatment=None):
+    def use_calibrated_params(prov,prov_file,treatment=None,treatment_file=None):
 
         params = dict()
 
         # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-        with open(file) as json_file:
-            json_data = json.load(json_file)
+        with open(prov_file) as prov_file:
+            prov_data = json.load(prov_file)
 
-        for keys in json_data[prov]:
-            params[keys] = json_data[prov][keys]
+        for keys in prov_data[prov]:
+            params[keys] = prov_data[prov][keys]
 
         if treatment:
-            for keys in json_data[treatment]:
-                params[keys] = json_data[treatment][keys] #treatment only applicable to p vivax
+            with open(treatment_file) as treat_file:
+                treat_data = json.load(treat_file)
+                
+            for keys in treat_data[treatment]:
+                params[keys] = treat_data[treatment][keys] #treatment only applicable to p vivax
 
         ics = params['ics']
         del params['ics']

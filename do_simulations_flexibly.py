@@ -18,13 +18,10 @@ from model_params import model_params
 from parameter_values import c_vec, pN_vec
 
 start = time.time()  # for timing the code
-fig_dir = "../../figures/code_generated/"
-outfilename = "./stored/all_things"
-tangled_filename = "./stored/entangled_treatment"
-
-# it_dict = {'flag_entangled_treatment': 1}
-# it_dict["flag_triggering_by_pf"] = 1
-# it_dict["zf"] = 3.5
+#FOR REFERENCE *****************
+#fig_dir = "../../figures/code_generated/"
+#outfilename = "./stored/all_things"
+#tangled_filename = "./stored/entangled_treatment"
 
 import gc
 
@@ -32,6 +29,7 @@ import gc
 prov_file= './stored/sorted_calibrated_params2.json'
 prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calibrated_params2.json
 treatment_options_list = ['Primaquine_Lowdose','Primaquine_Highdose','Tafenoquine'] #names need to exist in sorted_calibrated_params2.json 
+treatment_file = './stored/treatment_params.json'
 
 # p_mask = 0.50
 # mda1 = [270.0]  # lower bound of when MDA occurs
@@ -56,16 +54,15 @@ if __name__ == '__main__':
 
     for treatment_scenario in treatment_options_list:
 
-
         for prov_name in prov_list_epidemics:
             # calibrated_params, ics = sim_codes.use_calibrated_params(prov=prov_name,file=prov_file)
             #baseline parameters
-            calibrated_params_base, ics = model_params.use_calibrated_params(prov=prov_name,file=prov_file)
-            params_baseline = model_params(**calibrated_params_base)
+            calibrated_params_base, ics = model_params.use_calibrated_params(prov=prov_name,prov_file=prov_file)
+            #params_baseline = model_params(**calibrated_params_base)
 
             #parameters after changing radical cure treatment
-            calibrated_params_change = model_params.use_calibrated_params(prov=prov_name,file=prov_file,treatment=treatment_scenario)
-            params_treatment_change = model_params(**calibrated_params_change)
+            calibrated_params_change, _ = model_params.use_calibrated_params(prov=prov_name,prov_file=prov_file,treatment=treatment_scenario,treatment_file=treatment_file)
+            #params_treatment_change = model_params(**calibrated_params_change)
             
             it_dict = model_params.initialise_dict()
             treatment_rates = pN_vec #assume unchanged when treatment changes
@@ -116,11 +113,39 @@ if __name__ == '__main__':
                     # it_dict["mask_prob_mda"] = p_mask * pN_mda_vec[iterate1][iterate2][0] + (1 - p_mask) * pN_mda_vec[iterate1][iterate2][1]
                     # it_dict["c"] = [c_vec[iterate2][0], c_vec[iterate2][1]]
 
+
                     ####
-                    it_dict_baseline = model_params.update_dict(params_baseline, it_dict, iterate_treat, iterate_cov)
-                    it_dict_change = model_params.update_dict(params_treatment_change, it_dict, iterate_treat, iterate_cov)
+                    it_dict_baseline = model_params.update_dict(it_dict, iterate_treat, iterate_cov)
+                    it_dict_change = model_params.update_dict(it_dict, iterate_treat, iterate_cov)
                     ###
 
+                    # print(it_dict_baseline)
+                    # print("******************************************")
+                    # print(it_dict_change)                    
+                    
+                    
+                    # calibrated_params_base.update(**it_dict_baseline)
+                    
+                    # calibrated_params_change.update(**it_dict_change)
+
                     #sim_codes.do_iterate(params, it_dict, prov_name, prov_file, treatment_scenario, in_parallel)
+
+                    #calibrated_params_base.update(it_dict_baseline)
+                    it_dict_baseline.update(calibrated_params_base)
+                    params_baseline = model_params(**it_dict_baseline)
+
+                    
+
+                    #calibrated_params_change.update(it_dict_change)
+                    it_dict_change.update(calibrated_params_change)
+
+                    params_treatment_change = model_params(**it_dict_change)
+
+                    
+
+                    print(it_dict_baseline)
+                    print("******************************************")
+                    print(it_dict_change)
+
                     sim_codes.do_iterate([params_baseline, params_treatment_change], [it_dict_baseline, it_dict_change], ics, prov_name, prov_file, treatment_scenario, in_parallel)
                     gc.collect()
