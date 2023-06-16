@@ -612,9 +612,15 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
     params_changed = params_list[1] #params after treatment change
     it_dict_changed = it_dict_list[1] #it_dict after treatment change
 
+    print("\n************************************")
+    print("Treatment: "+treatment_scenario)
+    print("************************************\n")
+
+
     #iterate through all the different time changes
     for time_change in params.time_treatment_changes:
 
+        print("-----------------------------------")
         print('beginning a stochastic run')
         print('time_change = ' + str(time_change))
 

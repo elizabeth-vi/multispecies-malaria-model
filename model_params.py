@@ -32,7 +32,7 @@ class model_params(object):
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = 1 * days_in_year #Set to 1 years (previously 10 years)
+        self.time_day_end = 5 * days_in_year #Set to 1 years (previously 10 years)
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
@@ -41,7 +41,7 @@ class model_params(object):
 
         #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
         #self.time_treatment_changes = np.array([0, 4, 8])*days_in_year / self.time_day_step
-        self.time_treatment_changes = [int(round(change_year * days_in_year / self.time_day_step)) for change_year in [0, 0.5, 1]]
+        self.time_treatment_changes = [int(round(change_year * days_in_year / self.time_day_step)) for change_year in [0, 2, 4]]
 
         # convert time to units of time_day_step
         self.time_start = int(round(self.time_day_start / self.time_day_step))

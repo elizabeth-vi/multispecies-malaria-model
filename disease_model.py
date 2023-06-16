@@ -70,6 +70,7 @@ class Disease(object):
 
                 # MASKING LOGIC
                 if (person.state[Species.falciparum].current == Compartments.I or person.state[Species.falciparum].current == Compartments.A) and (person.state[Species.vivax].current == Compartments.I or person.state[Species.vivax].current == Compartments.A): #if mixed infection masking is possible
+                    
                     if random.random() < params.mask_prob: #treat with prob treat with T given masking may occur
                         _next = Compartments.T
                     else: # if masking doesn't happen treat as usual
@@ -85,6 +86,7 @@ class Disease(object):
 
                 # MASKING LOGIC
                 if (person.state[Species.falciparum].current in [Compartments.I, Compartments.A]) and (person.state[Species.vivax].current in [Compartments.I, Compartments.A]): #if mixed infection masking is possible
+                    
                     if random.random() < params.mask_prob_mda: # treat with prob treat with T given masking may occur
                         _next = Compartments.T
                     else: # if masking doesn't happen treat as usual

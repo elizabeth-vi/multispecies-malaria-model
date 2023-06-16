@@ -4,6 +4,7 @@ import json
 import numpy as np
 from model_params import model_params
 from operator import add
+import itertools
 
 plt.close("all")
 #plt.ion()
@@ -12,8 +13,16 @@ plt.close("all")
 #"C:\Users\eliza\Desktop\RA\multispecies-malaria-model\stored\entangled_treatment_Example_Province_Primaquine_Highdoseyear048.json"
 
 #filepath = "./stored\entangled_treatment_all_Example_Province_Primaquine_Highdose_timechange_0.json"
-filepaths = ["./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_0.json","./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_183.json","./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_365.json"]
-titles = ["Tafenoquine introduced at t=0","Tafenoquine introduced at t=183","Tafenoquine introduced at t=365"]
+#filepaths = ["./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_0.json","./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_183.json","./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_365.json"]
+titles = ["Tafenoquine introduced at t=0","Tafenoquine introduced at t=2 years","Tafenoquine introduced at t=4 years"]
+#filepaths = ["./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_0.json", "./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_730.json", "./stored/results/entangled_treatment_all_Example_Province_Tafenoquine_timechange_1461.json"]
+filepath_start = "./stored/results/entangled_treatment_all_Example_Province_"
+filepath_end = "_timechange_"
+filepath_type = ".json"
+
+# titles = ["Low-dose Primaquine introduced at t=0","Low-dose Primaquine introduced at t=0.5 years","Low-dose Primaquine introduced at t=1 years"]
+# filepaths = ["./stored/results/entangled_treatment_iterate_Primaquine_Lowdose_Example_Province_c0.3_timechange_0.json", "./stored/results/entangled_treatment_iterate_Primaquine_Lowdose_Example_Province_c0.3_timechange_183.json", "./stored/results/entangled_treatment_iterate_Primaquine_Lowdose_Example_Province_c0.3_timechange_365.json"]
+
 
 params = model_params()
 #times = np.arange(params.time_day_start,params.time_day_end,params.time_day_step)
@@ -35,17 +44,28 @@ mosq_fig.supylabel('Infections')
 mosq_fig.suptitle('Mozzie p.v. infections')
 plt.subplots_adjust(hspace=0.5)
 
-for plot_number in range(len( filepaths)):
-    filepath = filepaths[plot_number]
-    title = titles[plot_number]
+treatments = ["Tafenoquine"]
+timechanges = ["0", "183", "365"]
+
+for treatment_i, timechange_i in itertools.product(range(len(treatments)), range(len(timechanges))):
+    print("treatment i = "+str(treatment_i)+", timechange i= "+str(timechange_i))
+    plot_number = timechange_i + treatment_i*len(treatments)
+    print(plot_number)
+    
+    treatment = treatments[treatment_i]
+    timechange = timechanges[timechange_i]
+
+    filepath = filepath_start + treatment + filepath_end + timechange + filepath_type
+    title = treatment + " introduced at t=" + timechange + " days"
+    #title = titles[plot_number]
 
     dictionary = json.load(open(filepath, 'r'))
     variables = [key for key, value in dictionary.items()]
 
     
 
-    plot_selected = True
-    if plot_selected:
+    plot_infections = True
+    if plot_infections:
 
         #Plot human p.v. infections
         yvals = []
@@ -84,6 +104,9 @@ for plot_number in range(len( filepaths)):
         human_axs[plot_number].plot(times,pv_only_data)
         human_axs[plot_number].set_title(title)
         human_axs[plot_number].grid()
+        human_axs[plot_number].set_ylim([0, 10000]) #set_ylim(bottom=0) for just lower
+
+        #human_axs[plot_number]. set y axis lims
         
         # plt.figure()
         # plt.grid(True)
@@ -104,11 +127,15 @@ for plot_number in range(len( filepaths)):
         mosq_axs[plot_number].set_title(title)
         mosq_axs[plot_number].grid()
         #"""
+        #plt.gca().set_ylim(bottom=0)
+
+
 
 
 
     plot_all = False
     if plot_all:
+        print(variables)
         for variable in variables:
             #print(variable)
             vals = dictionary.get(variable)[0]
@@ -164,6 +191,13 @@ for plot_number in range(len( filepaths)):
                 plt.xlabel('time')
                 plt.ylabel(variable)
                 plt.title(variable)
+    
+    plot_all_compartments = False
+    if plot_all_compartments:
+        break
+
+
+
 
 plt.show(block=False)
 input()
