@@ -1,3 +1,4 @@
 __pycache__/
 .DS_Store/
-stored/results/
+stored/results/old_results/
+stored/results/results_iterate/
