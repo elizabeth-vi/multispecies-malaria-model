@@ -29,6 +29,7 @@ import gc
 prov_file= './stored/sorted_calibrated_params2.json'
 prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calibrated_params2.json
 treatment_options_list = ['Primaquine_Lowdose','Primaquine_Highdose','Tafenoquine'] #names need to exist in sorted_calibrated_params2.json 
+#treatment_options_list = ['Tafenoquine'] #names need to exist in sorted_calibrated_params2.json 
 treatment_file = './stored/treatment_params.json'
 
 # p_mask = 0.50
@@ -65,8 +66,8 @@ if __name__ == '__main__':
             #params_treatment_change = model_params(**calibrated_params_change)
             
             it_dict = model_params.initialise_dict()
-            treatment_rates = pN_vec #assume unchanged when treatment changes
-            coverage_scenarios = c_vec #assume unchanged
+            treatment_rates = [1]#pN_vec #assume unchanged when treatment changes - only used for size ************
+            coverage_scenarios = [1]#c_vec #assume unchanged**********************************
 
             #print(params.time_treatment_changes)
 
@@ -113,6 +114,8 @@ if __name__ == '__main__':
                     # it_dict["mask_prob_mda"] = p_mask * pN_mda_vec[iterate1][iterate2][0] + (1 - p_mask) * pN_mda_vec[iterate1][iterate2][1]
                     # it_dict["c"] = [c_vec[iterate2][0], c_vec[iterate2][1]]
 
+                    print([iterate_treat,iterate_cov])
+
 
                     ####
                     it_dict_baseline = model_params.update_dict(it_dict, iterate_treat, iterate_cov)
@@ -141,11 +144,10 @@ if __name__ == '__main__':
 
                     params_treatment_change = model_params(**it_dict_change)
 
-                    
 
-                    print(it_dict_baseline)
-                    print("******************************************")
-                    print(it_dict_change)
+                    # print(it_dict_baseline)
+                    # print("******************************************")
+                    # print(it_dict_change)
 
                     sim_codes.do_iterate([params_baseline, params_treatment_change], [it_dict_baseline, it_dict_change], ics, prov_name, prov_file, treatment_scenario, in_parallel)
                     gc.collect()

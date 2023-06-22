@@ -3,7 +3,7 @@
         "pN": [1.0, 0.99]
     },
     "Primaquine_Highdose": {
-        "pN": [1.0, 0.7]
+        "pN": [1.0, 0.6]
     },
     "Tafenoquine": {
         "pN": [1.0, 0.01]

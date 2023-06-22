@@ -320,7 +320,7 @@ class Run_Simulations(object):
 
 
         start = 1
-        end = max(start,min(time_change,self.params.time_end)) #stop at time treatment changes (as long as between 1 and time_end)
+        end = min(time_change,self.params.time_end) #stop at time treatment changes (as long as between 1 and time_end). Exclusive value
 
         #FOR A SINGULAR CHANGE i.e. time split into two segments
         for iteration in range(2): #can adjust code if you want to have multiple changes in same simulation
@@ -328,15 +328,11 @@ class Run_Simulations(object):
 
             for t in range(start,end):  
                 
-
-            # print('range is 1 to '+str(self.params.time_end))
-            # for t in range(1, self.params.time_end):  # from 1 as initial conditions at time 0
-
                 #if t==2:
                     #print("\nt = "+str(t))
                     #print("Quitting for testing purposes, line 338")
                     #quit()
-                if t%50==0:
+                if t%100==0:
                     print("t = " + str(t))
 
                 if self.params.FSAT == True:
@@ -559,7 +555,7 @@ class Run_Simulations(object):
                 # now update human population count for next timestep
                 self.params.human_population -= agent_death_counter
 
-            start = end
+            start = max(start, end) #start at previous endpoint, provided it's at least as large as "start"
             end = self.params.time_end
             self.params = params_changed
 
@@ -612,9 +608,15 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
     params_changed = params_list[1] #params after treatment change
     it_dict_changed = it_dict_list[1] #it_dict after treatment change
 
+    print("\n************************************")
+    print("Treatment: "+treatment_scenario)
+    print("************************************\n")
+
+
     #iterate through all the different time changes
     for time_change in params.time_treatment_changes:
 
+        print("-----------------------------------")
         print('beginning a stochastic run')
         print('time_change = ' + str(time_change))
 
@@ -684,8 +686,8 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
 
         print('Finished stochastic runs')
 
-        outfilename = "./stored/results/all_things"
-        tangled_filename = "./stored/results/entangled_treatment"
+        outfilename = "./stored/results_not_entangled/" #Modified from "all_things" to "not_entangled"
+        tangled_filename = "./stored/results"
 
         # saving results to file
         results = {'human_pop_pf_history': human_pf, 'human_pop_pv_history': human_pv, 'human_pop_mixed_inf_history': human_mixed_infectious, 'mozzie_pf_infectious': mozzie_pf_infectious, 'mozzie_pv_infectious': mozzie_pv_infectious, 'mozzie_mixed_infectious': mozzie_mixed_infectious, 'mozzie_pop_history': mozzie_all, 'pf_outcomes': pf_outcomes, 'pv_outcomes': pv_outcomes, 'num_TGD': num_TGD} #, 'agent_info': human_agents, 'mozzie_info': mozzie_info, 'num_TGD': num_TGD}
@@ -697,10 +699,10 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
             print("No treatment entanglement")
 
         if treatment_entangled == True:
-            with open(tangled_filename + '_all_' + prov_name + '_' + treatment_scenario + '_timechange_' + str(time_change)  + ".json", 'w') as outfile:
+            with open(tangled_filename +"_variables/"+ treatment_scenario + '_timechange' + str(time_change) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
         else:
-            with open(outfilename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+            with open(outfilename + treatment_scenario + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
 
         # if treatment_entangled == True:
@@ -721,7 +723,7 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
         iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict}
 
         if treatment_entangled == True:
-            with open(tangled_filename + '_iterate_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + '_timechange_' + str(time_change) + ".json", 'w') as outfile:
+            with open(tangled_filename + '_iterate/' + treatment_scenario + '_timechange' + str(int(time_change)) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
         else:
             with open(outfilename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:

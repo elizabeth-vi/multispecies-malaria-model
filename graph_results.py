@@ -1,169 +1,166 @@
-from pyexpat import model
 import matplotlib.pyplot as plt
 import json
 import numpy as np
 from model_params import model_params
-from operator import add
+import itertools
+import index_names
 
-plt.close("all")
-#plt.ion()
 
-#old filepath = "/Users/elizabeth/Desktop/RA/multispecies-malaria-model/stored/entangled_treatmentExample_Province_all_pN1.0_0.843_scenario0.json"
-#"C:\Users\eliza\Desktop\RA\multispecies-malaria-model\stored\entangled_treatment_Example_Province_Primaquine_Highdoseyear048.json"
+def plot_all_human_pv_compartments(treatment, timechange, data, t_start, t_end, t_step):
+    #Set up fig
+    human_fig, human_axs = plt.subplots(len(index_names.Compartments))
+    human_fig.supxlabel('time (days)')
+    human_fig.suptitle('Human p.v. Compartments for '+treatment+" introduced at time "+timechange)
 
-#filepath = "./stored\entangled_treatment_all_Example_Province_Primaquine_Highdose_timechange_0.json"
-filepaths = ["./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_0.json","./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_183.json","./stored/results\entangled_treatment_all_Example_Province_Tafenoquine_timechange_365.json"]
-titles = ["Tafenoquine introduced at t=0","Tafenoquine introduced at t=183","Tafenoquine introduced at t=365"]
+    variables = [*data.keys()]
+    
+    #Plot by compartments
+    pv_hist = variables[1]
+    vals_pv = data.get(pv_hist)[0]
+    
+    times = np.arange(start=t_start, stop=t_end, step=t_step)
+    n_vals = len(times)
+    
+    vals_pv = vals_pv[t_start : t_start+n_vals]
+
+    for compartment in index_names.Compartments:
+        pv_compartment_data = [val[compartment.value] for val in vals_pv]
+
+        #Plot human p.v. infections
+        human_axs[compartment.value].plot(times,pv_compartment_data)
+        human_axs[compartment.value].set_title(compartment.name,x=1.03,y=0)
+        human_axs[compartment.value].grid()
+        human_axs[compartment.value].set_ylim(bottom=0)
+
+def plot_human_select_pv_compartments_together(treatment, timechange, data, t_start, t_end, t_step, compartments_str):
+    #Set up fig
+    plt.figure()
+
+    variables = [*data.keys()]
+    compartments = [index_names.Compartments[comp] for comp in compartments_str]
+    
+    #Plot by compartments
+    pv_hist = variables[1]
+    vals_pv = data.get(pv_hist)[0]
+    
+    times = np.arange(start=t_start, stop=t_end, step=t_step)
+    n_vals = len(times)
+    
+    vals_pv = vals_pv[t_start : t_start+n_vals]
+
+    for index in range(len(compartments)):
+        compartment = compartments[index]
+        #compartment = index_names.Compartments(vars(compartments[index]))
+        pv_compartment_data = [val[compartment.value] for val in vals_pv]
+
+        #Plot human p.v. infections
+        plt.plot(times,pv_compartment_data)
+    
+    legend = [compartment.name for compartment in compartments]
+    plt.xlabel('time (days)')
+    plt.title("Human p.v. Compartments "+str(legend)+" for "+treatment+" introduced at time "+timechange)
+    plt.ylim(bottom=0)
+    plt.legend(legend)
+    plt.grid()
+
+def plot_human_pv_infections(treatment, timechange, data, t_start, t_end, t_step):
+    #Set up fig
+    plt.figure()
+
+    variables = [*data.keys()]
+    
+    #Plot by compartments
+    pv_hist = variables[1] #human_pop_pv_history
+    vals_pv = data.get(pv_hist)[0]
+    
+    times = np.arange(start=t_start, stop=t_end, step=t_step)
+    n_vals = len(times)
+    
+    vals_pv = vals_pv[t_start : t_start+n_vals]
+
+    pv_compartment_data = [val[index_names.Compartments['I']]+val[index_names.Compartments['A']] for val in vals_pv]
+
+    #Plot human p.v. infections
+    plt.plot(times,pv_compartment_data)
+    plt.xlabel('time (days)')
+    plt.ylabel('Infections')
+    plt.title('Human p.v. infections (I + A)'+" for "+treatment+" introduced at time "+timechange)
+    plt.ylim(bottom=0) #set lower bound for plotting
+    plt.grid()
+
+#WORK IN PROGRESS
+def plot_all_tracked_variables(treatment, timechange, data, t_start, t_end, t_step):
+
+    #variables = [*data.keys()] #For all variables
+    variables = ["human_pop_pv_history","mozzie_pv_infectious","mozzie_pop_history"]#,"pv_outcomes","num_TGD"] #Only plot PV-related
+    for variable in variables:
+
+        vals = data.get(variable)[0]
+        times = np.arange(start=t_start, stop=t_end, step=t_step)
+        n_vals = len(times)
+
+        plt.figure()
+        plt.grid(True)
+
+        if isinstance(vals[0],list):
+            try:
+                for i in range(len(vals[0])):
+                    yvals = [val[i] for val in vals]
+
+                    ## LINE GRAPH ##
+                    plt.plot(times,yvals[t_start : t_start+n_vals])
+                    
+                #print(index_names.Compartments._member_names_)  
+                plt.legend(index_names.Compartments._member_names_)
+            except Exception as e:
+                print("Breaking, variable = "+variable)
+                print(repr(e))
+                plt.close()
+                break
+        else:
+            yvals = vals
+
+            ## LINE GRAPH ##
+            plt.plot(times,yvals[t_start : t_start+n_vals])
+        plt.xlabel('time')
+        plt.ylabel(variable)
+        plt.title(variable)
+
+#*********************************SCRIPT START*********************************
+
+#File locations
+filepath_loc = "./stored/results_variables/"
+#Filepath name info
+[filepath_timechange,filepath_duration,filepath_type] = ["_timechange","_duration",".json"]
+
 
 params = model_params()
-#times = np.arange(params.time_day_start,params.time_day_end,params.time_day_step)
-#print(times)
+treatments = ["Tafenoquine"] #Must match file names. Options: ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"]]
+timechanges = ["730"] #which time changes you want to plot, in days. Options: ["0", "730", "1461"]
+duration = str(int(params.time_day_end)) #Simulation duration. Used in filename
 
+plt.close("all")
+nplots = len(treatments)*len(timechanges)
+[plot_start, plot_end, t_step] = [params.time_day_start,params.time_day_end,params.time_day_step] #Time of start/end you want to plot, and timestep used
 
-#print(len(variables[0]))
+for treatment_i, timechange_i in itertools.product(range(len(treatments)), range(len(timechanges))):
 
-human_fig, human_axs = plt.subplots(3)
-human_fig.supxlabel('time')
-human_fig.supylabel('Infections')
-human_fig.suptitle('Human p.v. infections (I and A)')
-plt.subplots_adjust(hspace=0.5)
+    plot_number = timechange_i + treatment_i*len(timechanges)
+    treatment = treatments[treatment_i]
+    timechange = timechanges[timechange_i]
 
+    filepath = filepath_loc + treatment + filepath_timechange + timechange + filepath_duration + duration+ filepath_type
+    data = json.load(open(filepath, 'r'))
+    variables = [key for key, value in data.items()]
 
-mosq_fig, mosq_axs = plt.subplots(3)
-mosq_fig.supxlabel('time')
-mosq_fig.supylabel('Infections')
-mosq_fig.suptitle('Mozzie p.v. infections')
-plt.subplots_adjust(hspace=0.5)
-
-for plot_number in range(len( filepaths)):
-    filepath = filepaths[plot_number]
-    title = titles[plot_number]
-
-    dictionary = json.load(open(filepath, 'r'))
-    variables = [key for key, value in dictionary.items()]
-
+    plot_all_human_pv_compartments(treatment, timechange, data, plot_start, plot_end, t_step)
+    plot_human_pv_infections(treatment, timechange, data, plot_start, plot_end, t_step)
+    plot_human_select_pv_compartments_together(treatment, timechange, data, plot_start, plot_end, t_step, compartments_str=["I","A","L"])
+    plot_human_select_pv_compartments_together(treatment, timechange, data, plot_start, plot_end, t_step, compartments_str=["T","G"])
     
+    ###WIP
+    #plot_all_tracked_variables(treatment, timechange, data, plot_start, plot_end, t_step)
 
-    plot_selected = True
-    if plot_selected:
-
-        #Plot human p.v. infections
-        yvals = []
-        pf_hist = variables[0] #name of variable, 'human_pop_pf_history'
-        pv_hist = variables[1]
-        mixed_hist = variables[2]
-        times = np.linspace((params.time_day_start),int(params.time_day_end),len(dictionary.get(pf_hist)[0]))
-        
-        vals_pf = dictionary.get(pf_hist)[0] #get values associated with first variable
-        vals_pv = dictionary.get(pv_hist)[0]
-        vals_mixed = dictionary.get(mixed_hist)[0]
-        
-        #yvals = yvals + vals[0]
-        #yvals = list(map(add,[val[1]+val[2] for val in vals_pf],[val[1]+val[2] for val in vals_mixed]))#doesn't work
-        pf_only_data = [val[1]+val[2] for val in vals_pf]
-        pv_only_data = [val[1]+val[2] for val in vals_pv]
-        #yvals = pv_only_data
-        #mixed_data = [val[1]+val[2] for val in vals_mixed]
-        #print(mixed_data)
-        #yvals = list(map(add,pf_only_data,mixed_data))
-        
-        #print(yvals)
-        
-        #"""
-        
-        #Plot p.f.
-        # plt.figure()
-        # plt.grid(True)
-        # plt.plot(times,pf_only_data, color='maroon')
-        # plt.xlabel('time')
-        # plt.ylabel('Infections')
-        # plt.title('Human p.f. infections (I and A)')
-        
-        #Plot human p.v. infections
-        
-        human_axs[plot_number].plot(times,pv_only_data)
-        human_axs[plot_number].set_title(title)
-        human_axs[plot_number].grid()
-        
-        # plt.figure()
-        # plt.grid(True)
-        # plt.plot(times,pv_only_data, color='maroon')
-        # plt.xlabel('time')
-        # plt.ylabel('Infections')
-        # plt.title(title + '\nHuman p.v. infections (I and A)')
-
-        #"""
-
-
-        #Plot mosquito p.v. infections
-        mozzie_pv = variables[4]
-        mozzie_pv_data = dictionary.get(variables[4])[0]
-
-        #Plot mosquito p.v. infections
-        mosq_axs[plot_number].plot(times, mozzie_pv_data)
-        mosq_axs[plot_number].set_title(title)
-        mosq_axs[plot_number].grid()
-        #"""
-
-
-
-    plot_all = False
-    if plot_all:
-        for variable in variables:
-            #print(variable)
-            vals = dictionary.get(variable)[0]
-            #print(vals)
-            times = np.linspace((params.time_day_start),int(params.time_day_end),len(vals))
-            #print([time for time in times])
-            #print(times)
-            #print(np.size(vals))
-            #print(len(vals))
-            #print(vals[0])
-            #print(vals)
-
-            #length = len(vals[0])
-            #print(length)
-
-            plt.figure()
-            plt.grid(True)
-
-            if isinstance(vals[0],list):
-                #print(len(vals[0]))
-                #if len(vals[0])>20:
-                    #plt.close()
-                    #break
-
-                try:
-                    for i in range(len(vals[0])):
-                        #plot
-                        #print(i)
-                        yvals = [val[i] for val in vals]
-                        #print(yvals)
-                        
-                        #plt.figure(i)
-
-                        ## LINE GRAPH ##
-                        plt.plot(times,yvals, color='maroon')
-                        #plt.setp(fig,linewidth=0.5) #set fig= plt.plot...
-                        plt.plot()
-                        #if i in [1,2]:
-                        #    plt.legend('I or A')
-                    plt.xlabel('time')
-                    plt.ylabel(variable)
-                    plt.title(variable)
-                    #print(variable)
-                except:
-                    plt.close()
-                    break
-            else:
-                yvals = vals
-                #print(yvals)
-
-                ## LINE GRAPH ##
-                plt.plot(times,yvals, color='maroon')
-                plt.xlabel('time')
-                plt.ylabel(variable)
-                plt.title(variable)
 
 plt.show(block=False)
 input()
