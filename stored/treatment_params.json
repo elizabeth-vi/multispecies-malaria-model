@@ -1,11 +1,56 @@
 {
     "Primaquine_Lowdose": {
-        "pN": [1.0, 0.99]
+        "pTfP": {
+            "value": [0.03,0.5],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "pP": {
+            "value": 0.5,
+            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
+        },
+        "psi": {
+            "value": [0.142,0.142],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.0000000001],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        }
     },
     "Primaquine_Highdose": {
-        "pN": [1.0, 0.6]
+        "pTfP": {
+            "value": [0.03,0.03],
+            "description": "UNCHANGED PARAMS FROM BASELINE. Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "pP": {
+            "value": 0.217,
+            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
+        },
+        "psi": {
+            "value": [0.142,0.142],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.000001],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        }
     },
     "Tafenoquine": {
-        "pN": [1.0, 0.01]
+        "pTfP": {
+            "value": [0.03,0.001],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "pP": {
+            "value": 0.01,
+            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
+        },
+        "psi": {
+            "value": [0.142,0.142],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.01],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        }
     }
 }

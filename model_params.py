@@ -13,7 +13,7 @@
 from index_names import Species, Compartments
 import json
 import numpy as np
-from parameter_values import *
+#from parameter_values import *
 import math
 
 days_in_year = 365.25
@@ -32,16 +32,21 @@ class model_params(object):
 
         # set time related parameters
         self.time_day_start = 0
-        self.time_day_end = int(5 * days_in_year+1) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
+        duration_years = 0.1
+        self.time_day_end = int(duration_years* days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
             self.time_day_step =1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
         self.time_vec = np.arange(start=self.time_day_start, stop=self.time_day_end, step=self.time_day_step)
 
-        #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
-        #self.time_treatment_changes = np.array([0, 4, 8])*days_in_year / self.time_day_step
-        self.time_treatment_changes = [int(change_year * days_in_year / self.time_day_step) for change_year in [0, 2, 4]]
+
+        #Added for p. vivax-only research. Changes implemented at time specified by time_treatment_changes, eg [0, 730, 1461]
+        if "treatment_changes_year" in kwargs:
+            treatment_changes_year = kwargs["treatment_changes_year"]
+        else:
+            treatment_changes_year = [duration_years]
+        self.time_treatment_changes = [int(year * days_in_year / self.time_day_step) for year in treatment_changes_year]
 
         # convert time to units of time_day_step
         self.time_start = int(self.time_day_start / self.time_day_step) #REMOVED ROUNDING, just floor it through int()
@@ -213,23 +218,6 @@ class model_params(object):
 
         return human_initial_inf, human_initial_mixed_only, mozzie_initial_inf, human_initial_inf_comp_x_only, human_initial_mixed_all, initial_human_population_counts, initial_mozzie, initial_human_combo_counts
 
-    # read parameters from calibrated values
-    # def use_calibrated_params(prov,file):
-
-    #     params = dict()
-
-    #     # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-    #     with open(file) as json_file:
-    #         json_data = json.load(json_file)
-
-    #     for keys in json_data[prov]:
-    #         params[keys] = json_data[prov][keys]
-
-    #     ics = params['ics']
-    #     del params['ics']
-
-    #     return params, ics
-
     def initialise_dict():
         it_dict = {'flag_entangled_treatment': 1}
         it_dict["flag_triggering_by_pf"] = 1
@@ -242,10 +230,14 @@ class model_params(object):
 
         return it_dict
 
-    def update_dict(it_dict, i1, i2):
+    def update_dict(it_dict, treatment_changes_year=None, i1=0, i2=0,):
         #includes hard-coded parameter values: adjust
 
         it_dict = dict(it_dict)
+        if treatment_changes_year:
+            it_dict["treatment_changes_year"] = treatment_changes_year
+            print("it dict")
+            print(it_dict["treatment_changes_year"])
 
         p_mask = 0.50
         mda1 = [270.0]  # lower bound of when MDA occurs
@@ -318,65 +310,10 @@ class model_params(object):
                 treat_data = json.load(treat_file)
                 
             for keys in treat_data[treatment]:
-                params[keys] = treat_data[treatment][keys] #treatment only applicable to p vivax
+                #Note: formatted to have value and description. Can edit treatment_params to not have "value"
+                params[keys] = treat_data[treatment][keys]["value"] #RC treatment only applicable to p vivax
 
         ics = params['ics']
         del params['ics']
 
         return params, ics
-
-# class model_ranges(object):
-#     def __init__(self, **kwargs):
-
-#         if 'time_day_step' in kwargs:
-#             self.time_day_step = kwargs['time_day_step']
-#         else:
-#             self.time_day_step = 1.0  # looks like this needs to be about ~0.1 for vivax: notable differences between stochastic and deterministic solutions if 0.5, less but still some with 0.2
-
-#         # update default values with preference to user-specified ones
-#         args = self.defaults()
-#         args.update(kwargs)
-
-#         for key, value in args.items():
-#             self.__setattr__(key, value)
-
-#         # setting the falciparum values to zero to prevent the `L` compartment being used
-#         self.kappa = [0.0, self.kappa]
-#         self.nu = [0.0, self.nu]
-#         self.pA = [0.0, self.pA]
-#         self.ph = [0.0, self.ph]
-#         self.pL = [0.0, self.pL]
-#         self.pP = [0.0, self.pP]
-#         # setting all malaria induced deaths of the other species to zero and get results matching deteterministic model -- for debugging only!
-#         self.pI = [0.0, 0.0]
-#         self.pT = [0.0, 0.0]
-#         self.pG = [0.0, 0.0]
-
-#     def defaults(self, filename=r"parameter_ranges.json"):
-#         """
-#         Pull out default values from a file in json format.
-#         :param filename: json file containing default parameter values, which can be overridden by user specified values
-#         :return:
-#         """
-#         with open(filename) as json_file:
-#             json_data = json.load(json_file)
-
-#         for key, value in json_data.items():
-#             # if this is a rate, multiply by `time_day_step`
-#             _tmp = value["exp"]
-#             _tmp_max = value["max"]
-#             _tmp_min = value["min"]
-#             if type(_tmp) == list:
-#                 _tmp_var = [0.01 * _tmp[idx] for idx in range(len(_tmp))] #[max(max(_tmp_max[idx]-_tmp[idx], _tmp[idx]-_tmp_min[idx]), 0.01 * _tmp[idx]) for idx in range(len(_tmp))]
-#             else:
-#                 _tmp_var = 0.01 * _tmp #max(max(_tmp_max - _tmp, _tmp - _tmp_min), 0.01 * _tmp)
-
-#             if value["units"] == "per day":
-#                 if type(_tmp) == list:
-#                     _tmp_var = [_tmp_var[idx] * self.time_day_step for idx in range(len(_tmp_var))]
-#                 else:
-#                     _tmp_var = _tmp_var * self.time_day_step
-#             json_data[key] = _tmp_var
-#         return json_data
-
-

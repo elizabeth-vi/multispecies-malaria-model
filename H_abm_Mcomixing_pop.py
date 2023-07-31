@@ -9,6 +9,7 @@ import math
 from scipy.integrate import solve_ivp
 from enum import IntEnum
 import json
+import os
 
 # import classes I've written
 from index_names import Species, Compartments, Mozzie_labels
@@ -577,23 +578,6 @@ class Run_Simulations(object):
 
         return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, humans, anophs, num_TGD ### total T, G, death: added [9] ###
 
-# # read parameters from calibrated values
-# def use_calibrated_params(prov,file):
-
-#     params = dict()
-
-#     # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
-#     with open(file) as json_file:
-#         json_data = json.load(json_file)
-
-#     for keys in json_data[prov]:
-#         params[keys] = json_data[prov][keys]
-
-#     ics = params['ics']
-#     del params['ics']
-
-#     return params, ics
-
 def convert(o):
     """ from: https://stackoverflow.com/questions/11942364/typeerror-integer-is-not-json-serializable-when-serializing-json-in-python"""
     #change from np.int64 to np.generic to allow for np.int32 
@@ -614,7 +598,7 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
 
 
     #iterate through all the different time changes
-    for time_change in params.time_treatment_changes:
+    for time_change in params_changed.time_treatment_changes:
 
         print("-----------------------------------")
         print('beginning a stochastic run')
@@ -687,7 +671,18 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
         print('Finished stochastic runs')
 
         outfilename = "./stored/results_not_entangled/" #Modified from "all_things" to "not_entangled"
-        tangled_filename = "./stored/results"
+        tangled_folder_variables = "./stored/results_variables/duration_"+str(int(params.time_day_end))+"/"
+        tangled_folder_iterate = "./stored/results_iterate/duration_"+str(int(params.time_day_end))+"/"
+
+        try:
+            os.makedirs(tangled_folder_variables, exist_ok = True)
+        except OSError as error:
+            continue
+        
+        try:
+            os.makedirs(tangled_folder_iterate, exist_ok = True)
+        except OSError as error:
+            continue
 
         # saving results to file
         results = {'human_pop_pf_history': human_pf, 'human_pop_pv_history': human_pv, 'human_pop_mixed_inf_history': human_mixed_infectious, 'mozzie_pf_infectious': mozzie_pf_infectious, 'mozzie_pv_infectious': mozzie_pv_infectious, 'mozzie_mixed_infectious': mozzie_mixed_infectious, 'mozzie_pop_history': mozzie_all, 'pf_outcomes': pf_outcomes, 'pv_outcomes': pv_outcomes, 'num_TGD': num_TGD} #, 'agent_info': human_agents, 'mozzie_info': mozzie_info, 'num_TGD': num_TGD}
@@ -699,18 +694,11 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
             print("No treatment entanglement")
 
         if treatment_entangled == True:
-            with open(tangled_filename +"_variables/"+ treatment_scenario + '_timechange' + str(time_change) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + treatment_scenario + '_timechange' + str(time_change) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
         else:
-            with open(outfilename + treatment_scenario + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + treatment_scenario + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
-
-        # if treatment_entangled == True:
-        #     with open(tangled_filename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_scenario" + str(it_dict["scenario"]) + ".json", 'w') as outfile:
-        #         json.dump(results, outfile, indent=4, default=convert)
-        # else:
-        #     with open(outfilename + prov_name + '_all_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
-        #         json.dump(results, outfile, indent=4, default=convert)
 
         # store interesting values
         max_values_f.append([list(x) for x in np.amax(human_pf, axis=0)])
@@ -723,15 +711,8 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
         iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict}
 
         if treatment_entangled == True:
-            with open(tangled_filename + '_iterate/' + treatment_scenario + '_timechange' + str(int(time_change)) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + treatment_scenario + '_timechange' + str(int(time_change)) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
         else:
-            with open(outfilename + '_' + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
-
-        # if treatment_entangled == True:
-        #     with open(tangled_filename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
-        #         json.dump(iterate_results, outfile, indent=4, default=convert)
-        # else:
-        #     with open(outfilename + prov_name + '_pN' + str(it_dict['pN'][0]) + "_" + str(it_dict['pN'][1]) + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
-        #         json.dump(iterate_results, outfile, indent=4, default=convert)
