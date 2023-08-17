@@ -232,7 +232,7 @@ class Run_Simulations(object):
 
         return human_initial_inf_comp_x_only
 
-    def run_me(self, time_change, params_changed, num_repeats):
+    def run_me(self, time_change, params_baseline, params_changed, baseline_file_bool, num_repeats):
 
         """
         :param num_repeats: number of repeats, needed for multiprocessing even though not used
@@ -285,19 +285,19 @@ class Run_Simulations(object):
         initial_human_counts_single_sp[Species.vivax].append(0)
 
         human_pop_pf_history = [None] * self.params.time_end  # preallocate memory
-        human_pop_pf_history[0] = initial_human_counts_single_sp[Species.falciparum].copy()  # add initial counts
+        human_pop_pf_history[self.params.time_start] = initial_human_counts_single_sp[Species.falciparum].copy()  # add initial counts
 
         human_pop_pv_history = [None] * self.params.time_end  # preallocate memory
-        human_pop_pv_history[0] = initial_human_counts_single_sp[Species.vivax].copy()  # add initial counts
+        human_pop_pv_history[self.params.time_start] = initial_human_counts_single_sp[Species.vivax].copy()  # add initial counts
 
         human_pop_mixed_inf_history = [None] * self.params.time_end
-        human_pop_mixed_inf_history[0] = human_initial_mixed_all
+        human_pop_mixed_inf_history[self.params.time_start] = human_initial_mixed_all
 
         # mozzies
         mozzie_pop_inf_history = [None, None, None] * self.params.time_end
-        mozzie_pop_inf_history[0] = mozzie_initial_inf.copy()
+        mozzie_pop_inf_history[self.params.time_start] = mozzie_initial_inf.copy()
         mozzie_pop_history = [None] * self.params.time_end
-        mozzie_pop_history[0] = initial_mozzie.copy()
+        mozzie_pop_history[self.params.time_start] = initial_mozzie.copy()
 
         # initialise Disease objects
         diseases = (Disease(malaria_species=Species.falciparum, initial_population_counts=initial_human_counts_single_sp[Species.falciparum]), Disease(malaria_species=Species.vivax, initial_population_counts=initial_human_counts_single_sp[Species.vivax]))
@@ -320,11 +320,19 @@ class Run_Simulations(object):
         mozzie_model = anophs.model
 
 
-        start = 1
-        end = min(time_change,self.params.time_end) #stop at time treatment changes (as long as between 1 and time_end). Exclusive value
+        if baseline_file_bool:
+            start = min(time_change+1, self.params.time_end) #Start recording values 1 step after baseline ends
+            end = self.params.time_end
+            # self.params = params_changed
+            its = 1
+        else: 
+            start = 1
+            end = min(time_change,self.params.time_end) #stop at time treatment changes (as long as between 1 and time_end). Exclusive value
+            self.params = params_baseline
+            its = 2
 
         #FOR A SINGULAR CHANGE i.e. time split into two segments
-        for iteration in range(2): #can adjust code if you want to have multiple changes in same simulation
+        for iteration in range(its): #can adjust code if you want to have multiple changes in same simulation
             print('range is '+str(start)+' to '+str(end))
 
             for t in range(start,end):  
@@ -333,8 +341,7 @@ class Run_Simulations(object):
                     #print("\nt = "+str(t))
                     #print("Quitting for testing purposes, line 338")
                     #quit()
-                if t%100==0:
-                    print("t = " + str(t))
+                print("t = " + str(t))
 
                 if self.params.FSAT == True:
                     possible_detections = human_pop_pf_history[t - 1][1] + human_pop_pf_history[t - 1][2] + \
@@ -556,9 +563,10 @@ class Run_Simulations(object):
                 # now update human population count for next timestep
                 self.params.human_population -= agent_death_counter
 
-            start = max(start, end) #start at previous endpoint, provided it's at least as large as "start"
-            end = self.params.time_end
-            self.params = params_changed
+            if not baseline_file_bool:
+                start = max(start, end) #start at previous endpoint, provided it's at least as large as "start"
+                end = self.params.time_end
+                self.params = params_changed
 
         #Finished iterating through times
 
@@ -584,13 +592,13 @@ def convert(o):
     if isinstance(o, np.generic): return int(o)
     raise TypeError
 
-def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_scenario, in_parallel):
-    
+def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in_parallel, baseline_file=False):
 
-    params = params_list[0] #baseline params
+    params_baseline = params_list[0] #baseline params
     it_dict = it_dict_list[0] #baseline it_dict
     params_changed = params_list[1] #params after treatment change
     it_dict_changed = it_dict_list[1] #it_dict after treatment change
+    params = params_changed #Use these as default params
 
     print("\n************************************")
     print("Treatment: "+treatment_scenario)
@@ -598,11 +606,13 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
 
 
     #iterate through all the different time changes
+    #Time change is the index (= day when time_step=1)
     for time_change in params_changed.time_treatment_changes:
 
         print("-----------------------------------")
         print('beginning a stochastic run')
-        print('time_change = ' + str(time_change))
+        if treatment_scenario != "Baseline":
+            print('time_change = ' + str(time_change))
 
         max_values_f = []
         max_values_v = []
@@ -611,7 +621,7 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
         min_values_f = []
         min_values_v = []
 
-        human_mixed_infectious =  []
+        human_mixed_infectious = []
         human_pf = []
         human_pv = []
         mozzie_pf_infectious = []
@@ -624,23 +634,84 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, prov_file, treatment_s
         mozzie_info = []
         num_TGD = []
 
+        baseline_bool = False
+
+        if baseline_file and time_change!=0:
+            baseline_bool = True
+            baseline_start = params_baseline.time_start #already int
+            baseline_end = min(time_change, params_baseline.time_end) #already int
+            duration = str(params_baseline.time_day_end) #For filenames
+
+            #Update timechange vals
+            params_changed.time_start = baseline_end
+            params_changed.time_day_start = int(params_changed.time_start * params_changed.time_day_step) #May not work with step not integer or 1
+            params_changed.time_vec = np.arange(start=params_changed.time_day_start, stop=params_changed.time_day_end, step=params_changed.time_day_step)
+            params_changed.t_det = np.arange(start=params_changed.time_start, stop=params_changed.time_end, step=0.5 / params_changed.time_day_step)  # don't need to solve the odes with such a fine timestep
+            params_changed.time_vec_det = params_changed.t_det * params_changed.time_day_step
+
+            #Get baseline outputs to re-use
+            baseline_variables_filename = "./stored/results_variables/duration_"+duration+"/baseline_timechange"+duration+"_duration"+duration+".json"
+            baseline_iterate_filename = "./stored/results_iterate/duration_"+duration+"/baseline_timechange"+duration+"_duration"+duration+".json"
+            data_baseline_variables = json.load(open(baseline_variables_filename,'r'))
+            data_baseline_iterate = json.load(open(baseline_iterate_filename,'r'))
+            
+            results = {'human_pop_pf_history': human_pf, 'human_pop_pv_history': human_pv, 'human_pop_mixed_inf_history': human_mixed_infectious, 'mozzie_pf_infectious': mozzie_pf_infectious, 'mozzie_pv_infectious': mozzie_pv_infectious, 'mozzie_mixed_infectious': mozzie_mixed_infectious, 'mozzie_pop_history': mozzie_all, 'pf_outcomes': pf_outcomes, 'pv_outcomes': pv_outcomes, 'num_TGD': num_TGD} #, 'agent_info': human_agents, 'mozzie_info': mozzie_info, 'num_TGD': num_TGD}
+            iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict}
+
+            for key,val in results.items():
+                val.append(data_baseline_variables[key][0][baseline_start:baseline_end+1])
+                if key == 'human_pop_pv_history':
+                    print(data_baseline_variables[key][0])
+
+            for key,val in iterate_results.items():
+                if key not in ['iterate']:
+                    val.append(data_baseline_iterate[key][0][baseline_start:baseline_end+1])
+
+            #NB: Number of susceptible mosquitoes not used in ICS: set to 0 for ease
+            ics = [[*human_pf[0][-1][:len(Compartments)-2],0,*mozzie_all[0][-1][1:3]], [*human_pv[0][-1][:len(Compartments)-2],0,*mozzie_all[0][-1][3:5]]]
+            print("ics")
+            print(ics[1])
+
         # parallelised
         if in_parallel==False:
             start = time.time()
-            for f in [Run_Simulations(params, ics, **it_dict).run_me(time_change, params_changed, x) for x in range(params.number_repeats)]:
+            print(human_pv)
+            for f in [Run_Simulations(params_changed, ics, **it_dict).run_me(time_change, params_baseline, params_changed, baseline_bool, x) for x in range(params_baseline.number_repeats)]:
 
-                human_pf.append(f[0])
-                human_pv.append(f[1])
-                human_mixed_infectious.append(f[2])
-                mozzie_pf_infectious.append([f[3][idx][Species.falciparum] + f[3][idx][Species.mixed] for idx in range(params.time_end)])
-                mozzie_pv_infectious.append([f[3][idx][Species.vivax] + f[3][idx][Species.mixed] for idx in range(params.time_end)])
-                mozzie_mixed_infectious.append([f[3][idx][Species.mixed] for idx in range(params.time_end)])
-                mozzie_all.append(f[4])
-                pf_outcomes.append(f[5])
-                pv_outcomes.append(f[6])
-                human_agents.append(f[7])
-                mozzie_info.append(f[8])
-                num_TGD.append(f[9])
+                if baseline_bool:
+                    #Ad hoc solution - index may differ when multiple provinces
+                    print("Baseline_end = "+str(baseline_end))
+                    change_start = baseline_end+1
+                    
+                    human_pf[0].extend(f[0][change_start:])
+                    human_pv[0].extend(f[1][change_start:])
+                    human_mixed_infectious[0].extend(f[2][change_start:])
+                    mozzie_pf_infectious[0].extend([f[3][idx][Species.falciparum] + f[3][idx][Species.mixed] for idx in range(change_start, params_changed.time_end)])
+                    mozzie_pv_infectious[0].extend([f[3][idx][Species.vivax] + f[3][idx][Species.mixed] for idx in range(change_start, params_changed.time_end)])
+                    mozzie_mixed_infectious[0].extend([f[3][idx][Species.mixed] for idx in range(change_start, params_changed.time_end)])
+                    mozzie_all[0].extend(f[4][change_start:])
+                    pf_outcomes[0].extend(f[5][change_start:])
+                    pv_outcomes[0].extend(f[6][change_start:])
+                    human_agents.append(f[7][change_start:]) #Not tracked
+                    mozzie_info.append(f[8]) #Not tracked
+                    num_TGD[0].extend(f[9][change_start:])
+
+                    print(f[1])
+                    print(human_pv)
+
+                else: #Don't use baseline data
+                    human_pf.append(f[0])
+                    human_pv.append(f[1])
+                    human_mixed_infectious.append(f[2])
+                    mozzie_pf_infectious.append([f[3][idx][Species.falciparum] + f[3][idx][Species.mixed] for idx in range(params_baseline.time_end)])
+                    mozzie_pv_infectious.append([f[3][idx][Species.vivax] + f[3][idx][Species.mixed] for idx in range(params_baseline.time_end)])
+                    mozzie_mixed_infectious.append([f[3][idx][Species.mixed] for idx in range(params_baseline.time_end)])
+                    mozzie_all.append(f[4])
+                    pf_outcomes.append(f[5])
+                    pv_outcomes.append(f[6])
+                    human_agents.append(f[7])
+                    mozzie_info.append(f[8])
+                    num_TGD.append(f[9])
         else:
             start = time.time()
 

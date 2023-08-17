@@ -31,7 +31,7 @@ prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calib
 treatment_options_list = ['Primaquine_Lowdose','Primaquine_Highdose','Tafenoquine'] #names need to exist in sorted_calibrated_params2.json 
 #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
 #time_treatment_changes = [int(change_year * days_in_year / self.time_day_step) for change_year in [0, 2, 4]]
-treatment_changes_year = [0,0.02,0.04]
+treatment_changes_year = [0, 0.1, 0.2]
 treatment_file = './stored/treatment_params.json'
 
 in_parallel = False
@@ -48,15 +48,13 @@ if __name__ == '__main__':
         params_baseline = model_params(**it_dict_baseline)
 
         #baseline run
-        sim_codes.do_iterate([params_baseline, params_baseline], [it_dict_baseline, it_dict_baseline], ics, prov_name, prov_file, "baseline", in_parallel)
+        sim_codes.do_iterate([params_baseline, params_baseline], [it_dict_baseline, it_dict_baseline], ics, prov_name, "Baseline", in_parallel)
         gc.collect()
-        duration = str(int(params_baseline.time_day_end))
-        baseline_filename = "./stored/results_variables/duration_"+duration+"/baseline_timechange"+duration+"_duration"+duration+".json"
+        # duration = str(int(params_baseline.time_day_end))
+        # baseline_file = "./stored/results_variables/duration_"+duration+"/baseline_timechange"+duration+"_duration"+duration+".json"
 
         for treatment_scenario in treatment_options_list:
         
-            #parameters after changing radical cure treatment
-            calibrated_params_change, _ = model_params.use_calibrated_params(prov=prov_name,prov_file=prov_file,treatment=treatment_scenario,treatment_file=treatment_file)
             
             
             treatment_rates = [0]#pN_vec #assume unchanged when treatment changes - only used for size ************
@@ -68,10 +66,12 @@ if __name__ == '__main__':
                 #for iterate2 in range(len(c_vec)):
                 for iterate_cov in range(len(coverage_scenarios)):
 
+                    #parameters after changing radical cure treatment
+                    calibrated_params_change, _ = model_params.use_calibrated_params(prov=prov_name,prov_file=prov_file,treatment=treatment_scenario,treatment_file=treatment_file)
                     it_dict_change = model_params.update_dict(it_dict, treatment_changes_year, iterate_treat, iterate_cov)
                     it_dict_change.update(calibrated_params_change)
                     params_treatment_change = model_params(**it_dict_change)
 
 
-                    sim_codes.do_iterate([params_baseline, params_treatment_change], [it_dict_baseline, it_dict_change], ics, prov_name, prov_file, treatment_scenario, in_parallel)
+                    sim_codes.do_iterate([params_baseline, params_treatment_change], [it_dict_baseline, it_dict_change], ics, prov_name, treatment_scenario, in_parallel, baseline_file=True)
                     gc.collect()

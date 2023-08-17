@@ -32,7 +32,7 @@ class model_params(object):
 
         # set time related parameters
         self.time_day_start = 0
-        duration_years = 0.1
+        duration_years = 0.3
         self.time_day_end = int(duration_years* days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
@@ -46,6 +46,7 @@ class model_params(object):
             treatment_changes_year = kwargs["treatment_changes_year"]
         else:
             treatment_changes_year = [duration_years]
+        # self.time_day_treatment_changes = [int(year * days_in_year) for year in treatment_changes_year]
         self.time_treatment_changes = [int(year * days_in_year / self.time_day_step) for year in treatment_changes_year]
 
         # convert time to units of time_day_step

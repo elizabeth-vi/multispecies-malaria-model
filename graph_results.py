@@ -173,7 +173,7 @@ def get_plot_data(data, t_start, t_end, t_step):
 params = model_params()
 treatments = ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"] #Must match file names. Options: ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"]]
 colours = ['r','b','g', 'k'] #for plotting
-timechanges = [0,7,14] #which time changes you want to plot, in days. e.g.: [0, 730, 1461]
+timechanges = [0, 36, 73] #which time changes you want to plot, in days. e.g.: [0, 730, 1461]
 duration = int(params.time_day_end) #Simulation duration
 
 plt.close("all")
@@ -203,10 +203,12 @@ legend_timechange.extend(["Change at t = "+str(x)+" days" for x in timechanges])
 #     # fig_IAL = plot_human_select_pv_compartments_together(data, plot_start, plot_end, t_step, compartments_str=["A"], fig=fig_IAL, colour = colours[-1])
 #     # fig_TG = plot_human_select_pv_compartments_together(data, plot_start, plot_end, t_step, compartments_str=["G"], fig=fig_TG, colour = colours[-1])
 
-#Set up fig
+#Set up fig 2
 fig_infect, ax_infect = plt.subplots(len(treatments))
 fig_infect.tight_layout(rect=[0, 0.03, 1, 0.95])
 fig_infect.suptitle("Infections when treatment policy is changed at different times")
+
+#Set up fig 1
 
 for treatment_i in range(len(treatments)):
     
@@ -217,13 +219,19 @@ for treatment_i in range(len(treatments)):
     # plt.plot(times_baseline,data_baseline)
     # baseline_infect = plot_human_pv_infections(data_baseline, plot_start, plot_end, t_step, ax_infect[treatment_i])
 
-    ax_infect[treatment_i].plot(times_baseline,data_baseline_I)
+    ax_infect[treatment_i].plot(times_baseline,data_baseline_I,colours[-1],zorder=4)
 
     #fig_infect[treatment_i] = plt.figure(baseline_infect)
     # fig_infect[treatment_i].legend(legend,loc=7)
     # print(treatment_i)
+
+    #Transformation for labelling line
+    trans = ax_infect[treatment_i].get_xaxis_transform()
+
     
+    #Plot infections
     for timechange_i in range(len(timechanges)):
+        colour = colours[timechange_i]
         treatment = treatments[treatment_i]
         timechange = timechanges[timechange_i]
         data = get_compartment_data(treatment,timechange,duration)
@@ -232,11 +240,15 @@ for treatment_i in range(len(treatments)):
         
         #Plot
         #For each treatment, plot I for each timechange option
-        ax_infect[treatment_i].plot(times,data_I)
+        ax_infect[treatment_i].plot(times,data_I,colour)
+        ax_infect[treatment_i].axvline(x=timechange,c=colour,ls='--',lw=1,label='_nolegend_') #Plot vertical line
+        ax_infect[treatment_i].text(timechange, 0.5, " t="+str(timechange), transform=trans,c=colour)
     
     ax_infect[treatment_i].set_ylim(bottom=0)
     ax_infect[treatment_i].legend(legend_timechange)
     ax_infect[treatment_i].set_title("Treatment policy changes to "+treatments[treatment_i]+" with higher treatment rates") #adjust to be exact pN
+
+    # plot_all_human_pv_compartments(treatment, "0", get_compartment_data(treatment,0,duration), plot_start, plot_end, t_step)
 
         
 
