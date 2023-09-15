@@ -660,8 +660,6 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in
 
             for key,val in results.items():
                 val.append(data_baseline_variables[key][0][baseline_start:baseline_end+1])
-                if key == 'human_pop_pv_history':
-                    print(data_baseline_variables[key][0])
 
             for key,val in iterate_results.items():
                 if key not in ['iterate']:
@@ -669,8 +667,6 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in
 
             #NB: Number of susceptible mosquitoes not used in ICS: set to 0 for ease
             ics = [[*human_pf[0][-1][:len(Compartments)-2],0,*mozzie_all[0][-1][1:3]], [*human_pv[0][-1][:len(Compartments)-2],0,*mozzie_all[0][-1][3:5]]]
-            print("ics")
-            print(ics[1])
 
         # parallelised
         if in_parallel==False:
@@ -695,9 +691,6 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in
                     human_agents.append(f[7][change_start:]) #Not tracked
                     mozzie_info.append(f[8]) #Not tracked
                     num_TGD[0].extend(f[9][change_start:])
-
-                    print(f[1])
-                    print(human_pv)
 
                 else: #Don't use baseline data
                     human_pf.append(f[0])
