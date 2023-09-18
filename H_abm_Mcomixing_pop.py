@@ -12,7 +12,7 @@ import json
 import os
 
 # import classes I've written
-from index_names import Species, Compartments, Mozzie_labels
+from index_names import Species, Compartments, Mozzie_labels, Treatments
 from disease_model import Disease
 from mosquito_model import Mozzies
 from human_agents import Agent
@@ -592,16 +592,16 @@ def convert(o):
     if isinstance(o, np.generic): return int(o)
     raise TypeError
 
-def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in_parallel, baseline_file=False):
+def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_policy, in_parallel, baseline_file=False):
 
-    params_baseline = params_list[0] #baseline params
-    it_dict = it_dict_list[0] #baseline it_dict
-    params_changed = params_list[1] #params after treatment change
-    it_dict_changed = it_dict_list[1] #it_dict after treatment change
+    params_baseline = params_list[Treatments.Baseline] #baseline params
+    it_dict = it_dict_list[Treatments.Baseline] #baseline it_dict
+    params_changed = params_list[treatment_policy] #params after treatment change
+    it_dict_changed = it_dict_list[treatment_policy] #it_dict after treatment change
     params = params_changed #Use these as default params
 
     print("\n************************************")
-    print("Treatment: "+treatment_scenario)
+    print("Treatment: "+treatment_policy.name)
     print("************************************\n")
 
 
@@ -611,7 +611,7 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_scenario, in
 
         print("-----------------------------------")
         print('beginning a stochastic run')
-        if treatment_scenario != "Baseline":
+        if treatment_policy.name != "Baseline":
             print('time_change = ' + str(time_change))
 
         max_values_f = []

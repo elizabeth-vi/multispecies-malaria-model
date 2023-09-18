@@ -1,5 +1,7 @@
 {
-    "Primaquine_Lowdose": {
+    "Baseline": {
+    },
+    "PLD": {
         "pTfP": {
             "value": [0.03,0.5],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
@@ -25,7 +27,7 @@
             "description": "treatment coverage level"
         }
     },
-    "Primaquine_Highdose": {
+    "PHD": {
         "pTfP": {
             "value": [0.03,0.03],
             "description": "UNCHANGED PARAMS FROM BASELINE. Probability of radical cure (primaquine-based treatment) failure"
@@ -51,7 +53,33 @@
             "description": "treatment coverage level"
         }
     },
-    "Tafenoquine": {
+    "PG6PD": {
+        "pTfP": {
+            "value": [0.03,0.001],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "pP": {
+            "value": 0.01,
+            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
+        },
+        "psi": {
+            "value": [0.142,0.142],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.01],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        },
+        "pN": {
+            "value": [1.0,0.2],
+            "description": "Probability get non-radical-cure based treatment (i.e. get ACT-based treatment)"
+        },
+        "c": {
+            "value": [0.3,1],
+            "description": "treatment coverage level"
+        }
+    },
+    "Taf": {
         "pTfP": {
             "value": [0.03,0.001],
             "description": "Probability of radical cure (primaquine-based treatment) failure"

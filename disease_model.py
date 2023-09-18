@@ -1,4 +1,4 @@
-from index_names import Compartments, Transitions, Species
+from index_names import Compartments, Transitions, Species, Treatments
 import random
 import math
 
@@ -30,6 +30,32 @@ class Disease(object):
 
     def calculate_time(self, current_time, rate):
         return current_time + int(max(1, round(random.expovariate(rate), ndigits=0)))
+    
+    def assign_treatment(G6PD_test,policy):
+        """
+        Assign radical cure treatment, based on current treatment policy and G6PD status
+        """
+
+        if policy == Treatments.PLD:
+            if G6PD_test <= 0.3:
+                return Treatments.PG6PD
+            else:
+                return Treatments.PLD
+            
+        elif policy == Treatments.PHD:
+            if G6PD_test <= 0.7:
+                return Treatments.PG6PD
+            else:
+                return Treatments.PHD
+            
+        elif policy == Treatments.Taf:
+            if G6PD_test <= 0.7:
+                return Treatments.PG6PD
+            else:
+                return Treatments.Taf
+        
+        print("Error: Policy is not listed")
+        quit()
 
     def transition_table(self, person, current_time, event_rates, params):
         """
@@ -77,10 +103,18 @@ class Disease(object):
                         _next = Compartments.G
 
                 else:
-                    if random.random() < params.pN[self.species]:
-                        _next = Compartments.T
+                    # if random.random() < params.pN[self.species]:
+                    #     _next = Compartments.T
+                    # else:
+                    #     _next = Compartments.G
+                    if random.random() < 1 - params.pN[self.species]: #seeks / is recommended radical cure treatment
+                        if person.G6PD_level == None: #ineligible for G6PD treatment
+                            _next = Compartments.T
+                        else: 
+                            _next = Compartments.G
                     else:
-                        _next = Compartments.G
+                        _next = Compartments.T
+
             else:
                 _time = time_mda
 
@@ -159,7 +193,15 @@ class Disease(object):
 
         elif current_status == Compartments.G:
             self.new_G.append(current_time)  # record now getting `G` treatment
+
+            #Determine kind of treatment allocated
+            G6PD_test = person.G6PD_test(person.sex, person.G6PD_level)
+            print(G6PD_test)
+            treatment = assign_treatment(G6PD_test,policy)
+
+
             _time = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.G_done])
+            
             if random.random() < params.pG[self.species]:  # malaria death
                 self.G_deaths.append(person.state[self.species].time)
                 _next = Compartments.just_died  # remove from compartments do anything with
@@ -322,7 +364,10 @@ class Disease(object):
         event_rate[Transitions.T_done] = params.rho[self.species]
 
         # 11: G -> ...
-        event_rate[Transitions.G_done] = params.psi[self.species]
+        # rates for each different G6PD treatment: [Primaquine_Lowdose, Primaquine_Highdose, Primaquine_G6PD, Tafenoquine]
+        # event_rate[Transitions.G_done] = params.psi[self.species]
+        event_rate[Transitions.G_done] = [params.psi_PLD[self.species], params.psi_PHD[self.species], params.psi_PG6PD[self.species], params.psi_Taf[self.species]]
 
         #event_rate[Transitions.mixed_inf] =
         return event_rate
+

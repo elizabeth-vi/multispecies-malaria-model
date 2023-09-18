@@ -14,6 +14,8 @@ class Compartments(IntEnum):
     just_died = 7  # use this to identify need to run `process_death`
     dead = 8
 
+    
+
 class Mozzie_labels(IntEnum):
     X = 0
     Wf = 1
@@ -46,3 +48,10 @@ class Transitions(IntEnum):
     L_S = 9  # hypnozoites all dead/absorbed/...
     T_done = 10  # no longer infectious from T
     G_done = 11  # no longer infectious from G
+
+class Treatments(IntEnum):
+    Baseline = 0
+    PLD = 1 #Primaquine Lowdose
+    PHD = 2 #Primaquine Highdose
+    PG6PD = 3 #Primaquine G6PD-safe
+    Taf = 4 #Tafenoquine

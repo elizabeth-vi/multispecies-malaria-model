@@ -296,7 +296,6 @@ class model_params(object):
 
     # read parameters from calibrated values
     def use_calibrated_params(prov,prov_file,treatment=None,treatment_file=None):
-
         params = dict()
 
         # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
@@ -306,13 +305,14 @@ class model_params(object):
         for keys in prov_data[prov]:
             params[keys] = prov_data[prov][keys]
 
-        if treatment:
+        if treatment!=None:
+            print(treatment.name)
             with open(treatment_file) as treat_file:
                 treat_data = json.load(treat_file)
                 
-            for keys in treat_data[treatment]:
+            for keys in treat_data[treatment.name]:
                 #Note: formatted to have value and description. Can edit treatment_params to not have "value"
-                params[keys] = treat_data[treatment][keys]["value"] #RC treatment only applicable to p vivax
+                params[keys] = treat_data[treatment.name][keys]["value"] #RC treatment only applicable to p vivax
 
         ics = params['ics']
         del params['ics']

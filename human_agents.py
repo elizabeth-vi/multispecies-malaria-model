@@ -66,26 +66,31 @@ class Agent(object):
         self.G6PD_level = G6PD_level
 
     #EDIT TO GIVE PROPER DISTRIBUTION
-    def G6PD_test(G6PD_level, sex):
+    def G6PD_test(self):
         
+        #sex -add
         sensitivity = [0.99, 0.44] #Sensitivity for [Severe, Intermediate] True Pos 
         specificity = [0.99, 0.97] #Specificity for [Males, Females] True neg
 
         #ineligible
-        if G6PD_level == None:
+        if self.G6PD_level == None:
             return None
 
         r = random.random()
-        if G6PD_level < 0.3:
+        if self.G6PD_level < 0.3:
             if r < sensitivity[0]:
                 return 0
-        elif G6PD_level < 0.7:
+        elif self.G6PD_level < 0.7:
             if r < sensitivity[1]:
                 return 0.5
         else:
             return 1
         return 1
     
+    def give_treatment(self, treatment):
+        pass
+
+
     # def G6PD_dist():
         
     #     #Probabilities for male and female, [Severe, Intermediate, Normal]
