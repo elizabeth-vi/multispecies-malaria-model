@@ -1,4 +1,4 @@
-from index_names import Compartments
+from index_names import Compartments, Species, Transitions, Treatments
 import random
 
 class Pathogen(object):
@@ -23,7 +23,7 @@ class Agent(object):
     """
     individuals in the human population
     """
-    __slots__ = 'state', 'memory', 'sex', 'G6PD_level'
+    __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'transition_overrides', 'G_treatment', 'param_overrides'
 
     def __init__(self, transition_time):
         """
@@ -65,6 +65,40 @@ class Agent(object):
 
         self.G6PD_level = G6PD_level
 
+        #Treatment is a subclass of "G"
+        self.G_treatment = None
+
+
+        #Override population default transition if a particular value is set here
+        # Ie transition_overrides[Transitions.L_whatever] = 0.4
+        self.transition_overrides = {}
+        self.param_overrides = {}
+
+    #For radical cure treatment specifically
+    def start_G_treatment(self, params, treatment):
+
+        G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
+
+        self.G_treatment = treatment
+
+        #Rate out of G for specified treatment
+        self.transition_overrides[Transitions.G_done] = params[treatment].psi[Species.vivax]
+        
+        #Add params to override defaults
+        for param in G_params:
+            self.param_overrides[param] = getattr(params[treatment],param)
+
+
+    def finish_G_treatment (self):
+
+        G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
+
+        del self.transition_overrides[Transitions.G_done]
+        for param in G_params:
+            del self.param_overrides[param]
+        self.G_treatment = None
+        
+
     #EDIT TO GIVE PROPER DISTRIBUTION
     def G6PD_test(self):
         
@@ -87,42 +121,65 @@ class Agent(object):
             return 1
         return 1
     
-    def give_treatment(self, treatment):
-        pass
+    def assign_G_treatment(self, params, policy):
+        """
+        Assign and commence radical cure treatment, based on current treatment policy and G6PD status
+        """
 
-
-    # def G6PD_dist():
-        
-    #     #Probabilities for male and female, [Severe, Intermediate, Normal]
-    #     p_male = [0.137, 0, 1-0.137]
-    #     p_female = [0.05, 0.158, (1-0.05-0.158)]
         
 
-    #     r = random.random()
-    #     sex = random.randint(0,1) # Male=0, Female=1
+        treatment = self.choose_treatment(policy)
+        self.start_G_treatment(params, treatment)
 
-    #     #male XY
-    #     if sex == 0: 
-    #         if r < p_male[0]:   #Hemizygous male
-    #             G6PD_level = 0
-    #         else:               #Normal male
-    #             G6PD_level = 1
+
+    def choose_treatment(self,policy):
         
-    #     # female XX
-    #     if sex == 1: 
-    #         if r < p_female[0]:         #Homozygous female
-    #             G6PD_level = 0
-    #         elif r < sum(p_female[0:2]):#Heterozygous female
-    #             G6PD_level = 0.5
-    #         else:                       #Normal female
-    #             G6PD_level = 1
+        G6PD_test = self.G6PD_test()
+        if policy == Treatments.Baseline:
+            return Treatments.Baseline
         
-    #     return G6PD_level, sex
+        elif policy == Treatments.PLD:
+            if G6PD_test <= 0.3:
+                return Treatments.PG6PD
+            else:
+                return Treatments.PLD
+            
+        elif policy == Treatments.PHD:
+            if G6PD_test <= 0.7:
+                return Treatments.PG6PD
+            else:
+                return Treatments.PHD
+            
+        elif policy == Treatments.Taf:
+            if G6PD_test <= 0.7:
+                return Treatments.PG6PD
+            else:
+                return Treatments.Taf
+        
+        print("Error: Policy is not listed")
+        quit()
+                         
+                         
+                         
+                         
+                         
+    # def give_treatment(self, treatment):
+    #     pass
+
+    #Get a specific transition probability given the global table and this agent's particular overrides
+    #transition = transition ID from enum
+    # def get_transition_rate(self, transition, global_transitions):
+    #     # For each transition category
+    #     if (self.transition_overrides.has_key(transition)):
+    #         return self.transition_overrides[transition]
+        
+    #     return global_transitions[transition]
+
+
+
     
-    # def set_G6PD(agent):
-    #     agent.G6PD_level, sex = G6PD_dist()
-    #     agent.G6PD_test = G6PD_test(agent.G6PD_level, sex)
-
-    #     return
-
-    
+    #Not yet used
+# class Treatment():
+#     def __init__(self, params = {}, transition_overrides = {}, load_dict = x):
+#         self.params = params
+#         self.transition_overrides = {}

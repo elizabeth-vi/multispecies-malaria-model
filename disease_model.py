@@ -31,33 +31,7 @@ class Disease(object):
     def calculate_time(self, current_time, rate):
         return current_time + int(max(1, round(random.expovariate(rate), ndigits=0)))
     
-    def assign_treatment(G6PD_test,policy):
-        """
-        Assign radical cure treatment, based on current treatment policy and G6PD status
-        """
-
-        if policy == Treatments.PLD:
-            if G6PD_test <= 0.3:
-                return Treatments.PG6PD
-            else:
-                return Treatments.PLD
-            
-        elif policy == Treatments.PHD:
-            if G6PD_test <= 0.7:
-                return Treatments.PG6PD
-            else:
-                return Treatments.PHD
-            
-        elif policy == Treatments.Taf:
-            if G6PD_test <= 0.7:
-                return Treatments.PG6PD
-            else:
-                return Treatments.Taf
-        
-        print("Error: Policy is not listed")
-        quit()
-
-    def transition_table(self, person, current_time, event_rates, params):
+    def transition_table(self, person, current_time, event_rates, params_list, treatment_policy):
         """
         Place to specify transition table: Note the fact that a transition is/has just occurred was determined in self.update() and infection events are determined in self.infect_me()
         :param person: current agent
@@ -67,7 +41,19 @@ class Disease(object):
         :return: nothing explicit, but next agent compartment and.time updated
         """
         current_status = person.state[self.species].current  # just transitioned to this
+        params = params_list[treatment_policy]
+        
+        #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+        for transition in person.transition_overrides:
+            event_rates[transition] = person.transition_overrides[transition]
+
+        #Update params for person-specific override value (e.g. different radical cure parameters)
+        for param in person.param_overrides:
+            setattr(params, param, person.param_overrides[param])
+
+
         # determine what next transition is, and when (excepting infection)
+
         if current_status == Compartments.S:
             _next = Compartments.S
             _time = params.time_end + 1  # stay susceptible unless infected
@@ -192,13 +178,7 @@ class Disease(object):
                         _next = Compartments.R
 
         elif current_status == Compartments.G:
-            self.new_G.append(current_time)  # record now getting `G` treatment
-
-            #Determine kind of treatment allocated
-            G6PD_test = person.G6PD_test(person.sex, person.G6PD_level)
-            print(G6PD_test)
-            treatment = assign_treatment(G6PD_test,policy)
-
+            self.new_G.append(current_time)  # record now getting `G` treatment 
 
             _time = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.G_done])
             
@@ -234,6 +214,11 @@ class Disease(object):
         :param params:
         :return:
         """
+
+        #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+        for transition in person.transition_overrides:
+            event_rates[transition] = person.transition_overrides[transition]
+
         # either relapse (I or A) or hypnozoite death (S) (unless infected in the meantime)
         time_relapse = self.calculate_time(current_time=current_time, rate=params.zf * event_rates[Transitions.L_relapse])
         time_recover = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.L_S])
@@ -250,13 +235,18 @@ class Disease(object):
         person.state[Species.vivax].next = _next
         person.state[Species.vivax].time = _time
 
-    def update(self, person, current_time, event_rates, params, event_rates_other_sp = None):
+    def update(self, person, current_time, event_rates, params_list, policy, event_rates_other_sp = None):
         """
         check if time to next event is now, or infection occurs
         :return: updates state
         """
         assert person.state[self.species].time >= current_time
         current_compartment = person.state[self.species].current
+        params = params_list[policy]
+
+        #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+        for transition in person.transition_overrides:
+            event_rates[transition] = person.transition_overrides[transition]
 
         if person.state[self.species].time == current_time:  # an event has been scheduled for this time
             assert current_compartment not in [Compartments.dead, Compartments.just_died]
@@ -270,23 +260,37 @@ class Disease(object):
             if current_compartment == Compartments.L and (person.state[self.species].next in [Compartments.I, Compartments.A]):
                 self.relapses.append(current_time)  # record relapse event -- here and not in self.update as a new infection may occur in the meantime
 
+            #If starting G treatment, assign a treatment and new params
+            if person.state[self.species].next == Compartments.G:
+                person.assign_G_treatment(params_list, policy)
+
+            #If ending G treatment, undo these changes
+            if person.state[self.species].current == Compartments.G:
+                person.finish_G_treatment()
+
+
             # add triggering logic (triggering occurs after a pf recovery)
             if params.flag_triggering_by_pf and self.species == Species.falciparum and person.state[Species.vivax].current == Compartments.L and person.state[self.species].next == Compartments.R:
                 self.triggering(person=person, current_time=current_time, event_rates=event_rates_other_sp, params=params)
 
             # continue as usual
             person.state[self.species].current = person.state[self.species].next  # transition occurs
-            self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params=params)  # identify next transition to occur
+            self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params_list=params_list, treatment_policy=policy)  # identify next transition to occur
         else:   # check for infection event
             if current_compartment == Compartments.S:
-                self.infect_me(person=person, rate_infection=event_rates[Transitions.S_inf], prob_I=params.pc[self.species], params=params, current_time=current_time, event_rates=event_rates)
+                self.infect_me(person=person, rate_infection=event_rates[Transitions.S_inf], prob_I=params.pc[self.species], params_list=params_list, policy=policy, current_time=current_time, event_rates=event_rates)
             elif current_compartment == Compartments.R:
-                self.infect_me(person=person, rate_infection=event_rates[Transitions.R_inf], prob_I=params.pR[self.species], params=params, current_time=current_time, event_rates=event_rates)
+                self.infect_me(person=person, rate_infection=event_rates[Transitions.R_inf], prob_I=params.pR[self.species], params_list=params_list, policy=policy, current_time=current_time, event_rates=event_rates)
             elif current_compartment == Compartments.L:
                 assert self.species == Species.vivax, "falciparum person is in `L`"
-                self.infect_me(person=person, rate_infection=event_rates[Transitions.L_inf], prob_I=params.pL[self.species], params=params, current_time=current_time, event_rates=event_rates)
+                self.infect_me(person=person, rate_infection=event_rates[Transitions.L_inf], prob_I=params.pL[self.species], params_list=params_list, policy=policy, current_time=current_time, event_rates=event_rates)
 
-    def infect_me(self, person, rate_infection, prob_I, params, current_time, event_rates):
+    def infect_me(self, person, rate_infection, prob_I, params_list, policy, current_time, event_rates):
+
+        #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+        for transition in person.transition_overrides:
+            event_rates[transition] = person.transition_overrides[transition]
+
         if random.random() < (1 - math.exp(-rate_infection)):
             self.new_infections.append(current_time)  # just moved to I or A *now*
             self.pop_counts[person.state[self.species].current] -= 1  # decrement count for current state
@@ -297,7 +301,7 @@ class Disease(object):
                 person.state[self.species].current = Compartments.A
 
             self.pop_counts[person.state[self.species].current] += 1  # increment new current state
-            self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params=params)  # determine next event and time it occurs
+            self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params_list=params_list, treatment_policy=policy)  # determine next event and time it occurs
 
     def stochastic_sir_event_rates(self, params, mozzie, time):
         """
@@ -364,9 +368,8 @@ class Disease(object):
         event_rate[Transitions.T_done] = params.rho[self.species]
 
         # 11: G -> ...
-        # rates for each different G6PD treatment: [Primaquine_Lowdose, Primaquine_Highdose, Primaquine_G6PD, Tafenoquine]
-        # event_rate[Transitions.G_done] = params.psi[self.species]
-        event_rate[Transitions.G_done] = [params.psi_PLD[self.species], params.psi_PHD[self.species], params.psi_PG6PD[self.species], params.psi_Taf[self.species]]
+        # Amended to be person-specific: override if receiving treatment with different duration
+        event_rate[Transitions.G_done] = params.psi[self.species]
 
         #event_rate[Transitions.mixed_inf] =
         return event_rate

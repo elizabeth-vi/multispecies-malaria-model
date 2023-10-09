@@ -32,7 +32,7 @@ class model_params(object):
 
         # set time related parameters
         self.time_day_start = 0
-        duration_years = 0.3
+        duration_years = 0.1
         self.time_day_end = int(duration_years* days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']

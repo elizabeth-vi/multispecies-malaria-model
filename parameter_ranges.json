@@ -350,7 +350,7 @@
         "symbol": "$p_{P,v}$",
         "note": "This should depend on the duration of treatment, which is $r_P$ in \\cite{silal_malaria_2019}. This is ``phprim'' in \\cite{silal_malaria_2019}."
     },
-    "psi_PLD": {
+    "psi": {
         "min": [
             0.07,
             0.07
@@ -363,70 +363,7 @@
             0.5,
             0.5
         ],
-        "description": "Inverse of average duration of primaquine low-dose treatment",
-        "units": "per day",
-        "source": "\\cite{silal_malaria_2019}",
-        "location": "",
-        "level": "species_dependent_global",
-        "symbol": "$\\psi$",
-        "note": "This is NOT $r_P$ in \\cite{silal_malaria_2019}. Standard treatment is for 14 days, TODO find reference for average infectiousness after this though. Primaquine is about preventing relapse, so this is really dependent on which drug is used as the simultaneous schizonticidal therapy -- $r_P$ affects my $p_P$."
-    },
-    "psi_PHD": {
-        "min": [
-            0.07,
-            0.07
-        ],
-        "exp": [
-            0.142,
-            0.142
-        ],
-        "max": [
-            0.5,
-            0.5
-        ],
-        "description": "Inverse of average duration of primaquine high-dose treatment",
-        "units": "per day",
-        "source": "\\cite{silal_malaria_2019}",
-        "location": "",
-        "level": "species_dependent_global",
-        "symbol": "$\\psi$",
-        "note": "This is NOT $r_P$ in \\cite{silal_malaria_2019}. Standard treatment is for 14 days, TODO find reference for average infectiousness after this though. Primaquine is about preventing relapse, so this is really dependent on which drug is used as the simultaneous schizonticidal therapy -- $r_P$ affects my $p_P$."
-    },
-    "psi_PG6PD": {
-        "min": [
-            0.07,
-            0.07
-        ],
-        "exp": [
-            0.142,
-            0.142
-        ],
-        "max": [
-            0.5,
-            0.5
-        ],
-        "description": "Inverse of average duration of primaquine G6PD-safe treatment",
-        "units": "per day",
-        "source": "\\cite{silal_malaria_2019}",
-        "location": "",
-        "level": "species_dependent_global",
-        "symbol": "$\\psi$",
-        "note": "This is NOT $r_P$ in \\cite{silal_malaria_2019}. Standard treatment is for 14 days, TODO find reference for average infectiousness after this though. Primaquine is about preventing relapse, so this is really dependent on which drug is used as the simultaneous schizonticidal therapy -- $r_P$ affects my $p_P$."
-    },
-    "psi_Taf": {
-        "min": [
-            0.07,
-            0.07
-        ],
-        "exp": [
-            0.142,
-            0.142
-        ],
-        "max": [
-            0.5,
-            0.5
-        ],
-        "description": "Inverse of average duration of tafenoquine treatment",
+        "description": "Inverse of average duration of primaquine 7-day treatment",
         "units": "per day",
         "source": "\\cite{silal_malaria_2019}",
         "location": "",

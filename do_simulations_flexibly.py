@@ -33,7 +33,7 @@ treatment_options_list = [Treatments.Baseline,Treatments.PLD,Treatments.PHD,Trea
 treatment_policy_list = [Treatments.PLD,Treatments.PHD,Treatments.Taf] #Run for these primary policies
 #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
 #time_treatment_changes = [int(change_year * days_in_year / self.time_day_step) for change_year in [0, 2, 4]]
-treatment_changes_year = [0, 0.1, 0.2]
+treatment_changes_year = [0, 0.04, 0.08]
 treatment_file = './stored/treatment_params.json'
 
 in_parallel = False

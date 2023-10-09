@@ -12,7 +12,7 @@ import json
 import os
 
 # import classes I've written
-from index_names import Species, Compartments, Mozzie_labels, Treatments
+from index_names import Species, Compartments, Mozzie_labels, Treatments, Transitions
 from disease_model import Disease
 from mosquito_model import Mozzies
 from human_agents import Agent
@@ -63,7 +63,7 @@ class Run_Simulations(object):
             person.state[idx].next = Compartments.dead
             person.state[idx].time = self.params.time_end + 2  # i.e. never
 
-    def process_treatment_entanglement(self, diseases, person, current_time, event_rates,params):
+    def process_treatment_entanglement(self, diseases, person, current_time, event_rates, params_list):
         """
         If treatment entanglement is on, need to update the status of the other species
         :param diseases:
@@ -81,9 +81,9 @@ class Run_Simulations(object):
         diseases[sp].pop_counts[person.state[sp].current] -= 1  # decrement current compartment count
         diseases[sp].pop_counts[Compartments.T] += 1 # increment treatment compartment count
         person.state[sp].current = Compartments.T  # change to Treatment status
-        diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
+        diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params_list)  # determine next compartment
 
-    def process_treatment_entanglement2(self, diseases, person, current_time, event_rates, params):
+    def process_treatment_entanglement2(self, diseases, person, current_time, event_rates, params_list):
         """
         If treatment entanglement is on, need to update the status of the other species with radical cure
         :param diseases:
@@ -101,7 +101,7 @@ class Run_Simulations(object):
         diseases[sp].pop_counts[person.state[sp].current] -= 1  # decrement current compartment count
         diseases[sp].pop_counts[Compartments.G] += 1  # increment treatment compartment count
         person.state[sp].current = Compartments.G  # change to Treatment status
-        diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
+        diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params_list)  # determine next compartment
 
 
     # def mixed_infection_event(self, diseases, person, current_time, event_rates,params):
@@ -125,7 +125,7 @@ class Run_Simulations(object):
     #     diseases[sp].transition_table(person=person, current_time=current_time, event_rates=event_rates[sp], params=params)  # determine next compartment
 
 
-    def initialise_agent_compartments(self, rates, diseases, anophs, humans, human_initial_counts):
+    def initialise_agent_compartments(self, rates, params_list, policy, diseases, anophs, humans, human_initial_counts):
         """
 
         :param rates: event_rates so know prob and time 'til next event
@@ -150,12 +150,16 @@ class Run_Simulations(object):
                     # update falciparum status
                     humans[agent_counter].state[Species.falciparum].current = pf_cmp
                     diseases[Species.falciparum].transition_table(person=humans[agent_counter], current_time=self.params.time_start,
-                                                              event_rates=pf_starting_event_rates, params=self.params)
+                                                              event_rates=pf_starting_event_rates, params_list=params_list, treatment_policy=Treatments.Baseline)
                     # update vivax status
                     humans[agent_counter].state[Species.vivax].current = pv_cmp
                     diseases[Species.vivax].transition_table(person=humans[agent_counter], current_time=self.params.time_start,
                                                          event_rates=pv_starting_event_rates,
-                                                         params=self.params)
+                                                         params_list=params_list, treatment_policy=Treatments.Baseline)
+                    
+                    #Assign treatment for those in G
+                    if pv_cmp == Compartments.G:
+                        humans[agent_counter].assign_G_treatment(params_list,policy)
                     agent_counter += 1
 
         assert agent_counter == self.params.human_population, "not all agents assigned since total population = " + str(self.params.human_population) + ", but agents assigned = " + str(agent_counter)
@@ -232,7 +236,7 @@ class Run_Simulations(object):
 
         return human_initial_inf_comp_x_only
 
-    def run_me(self, time_change, params_baseline, params_changed, baseline_file_bool, num_repeats):
+    def run_me(self, time_change, params_list, treatment_policy, baseline_file_bool, num_repeats):
 
         """
         :param num_repeats: number of repeats, needed for multiprocessing even though not used
@@ -261,7 +265,7 @@ class Run_Simulations(object):
         deaths_owing = 0
         ########################################################################
 
-        print(num_repeats)
+        print("Number of repeats = "+str(num_repeats))
 
         # popn=self.params.human_population redundant
 
@@ -306,13 +310,21 @@ class Run_Simulations(object):
         human_initial_inf_comp_x_only = self.calculate_mixed_only(human_initial_mixed_all, diseases)
 
 
+        # #Initialise treatment objects with transitions / params from 
+        # treatments = {}
+        # treatments['t1'] = Treatment(transition_overrides = {Transitions.L_inf: 0.6}, params = {"myparam1": 0.4})
+
+        # #human.assign_treatment(treatments['t1'])
+
+        # #human.treatment.params['tg]
+
         # initialise populations
         # mozzies
         anophs = Mozzies(mozzie_initial_inf=mozzie_initial_inf, human_initial_inf_comp_x_only=human_initial_inf_comp_x_only, human_initial_mixed=human_initial_mixed_all)
         anophs_y0 = initial_mozzie
         # humans
         humans = [Agent(transition_time=self.params.time_end+1) for x in range(self.params.human_population)]
-        humans = self.initialise_agent_compartments(rates=rates, diseases=diseases, anophs=anophs, humans=humans, human_initial_counts=initial_human_counts_full_combo)
+        humans = self.initialise_agent_compartments(rates=rates, params_list=params_list, policy=treatment_policy, diseases=diseases, anophs=anophs, humans=humans, human_initial_counts=initial_human_counts_full_combo)
 
         FSAT_indicator = np.zeros(self.params.time_end + self.params.FSAT_period)
 
@@ -328,6 +340,7 @@ class Run_Simulations(object):
         else: 
             start = 1
             end = min(time_change,self.params.time_end) #stop at time treatment changes (as long as between 1 and time_end). Exclusive value
+            params_baseline = params_list[Treatments.Baseline]
             self.params = params_baseline
             its = 2
 
@@ -365,11 +378,16 @@ class Run_Simulations(object):
 
                 for human in humans:
 
+                    params = params_list[treatment_policy]
+                    for param in human.param_overrides:
+                        setattr(params, param, human.param_overrides[param])
+
+
                     prev_pf=human.state[Species.falciparum].current
                     prev_pv = human.state[Species.vivax].current
 
-                    update[Species.falciparum](person=human, current_time=t, event_rates=current_event_rates[Species.falciparum], params=self.params, event_rates_other_sp=current_event_rates[Species.vivax])
-                    update[Species.vivax](person=human, current_time=t, event_rates=current_event_rates[Species.vivax], params=self.params)
+                    update[Species.falciparum](person=human, current_time=t, event_rates=current_event_rates[Species.falciparum], params_list=params_list, policy=treatment_policy, event_rates_other_sp=current_event_rates[Species.vivax])
+                    update[Species.vivax](person=human, current_time=t, event_rates=current_event_rates[Species.vivax], params_list=params_list, policy=treatment_policy)
 
                     # Logic for setting a mixed infection transition
                     curr_pf = human.state[Species.falciparum].current
@@ -409,13 +427,14 @@ class Run_Simulations(object):
 
                             # probabilites for transitions
                             if human.state[sp_].current == Compartments.T:
-                                prob_treatment_death = self.params.pT[sp_]
-                                prob_treatment_failure = self.params.pTfA[sp_]
-                                prob_treatment_latency = self.params.pA[sp_]
+                                #prob_treatment_death = self.params.pT[sp_]
+                                prob_treatment_death = params.pT[sp_]
+                                prob_treatment_failure = params.pTfA[sp_]
+                                prob_treatment_latency = params.pA[sp_]
                             else: # human.state[sp_].current == Compartments.G
-                                prob_treatment_death = self.params.pG[sp_]
-                                prob_treatment_failure = self.params.pTfP[sp_]
-                                prob_treatment_latency = self.params.pP[sp_]
+                                prob_treatment_death = params.pG[sp_]
+                                prob_treatment_failure = params.pTfP[sp_]
+                                prob_treatment_latency = params.pP[sp_]
                             # move compartments
                             diseases[sp_].pop_counts[human.state[sp_].current] -= 1
                             if random.random() < prob_treatment_death: # death
@@ -566,6 +585,7 @@ class Run_Simulations(object):
             if not baseline_file_bool:
                 start = max(start, end) #start at previous endpoint, provided it's at least as large as "start"
                 end = self.params.time_end
+                params_changed = params_list[treatment_policy]
                 self.params = params_changed
 
         #Finished iterating through times
@@ -672,7 +692,7 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_policy, in_p
         if in_parallel==False:
             start = time.time()
             print(human_pv)
-            for f in [Run_Simulations(params_changed, ics, **it_dict).run_me(time_change, params_baseline, params_changed, baseline_bool, x) for x in range(params_baseline.number_repeats)]:
+            for f in [Run_Simulations(params_changed, ics, **it_dict).run_me(time_change, params_list, treatment_policy, baseline_bool, x) for x in range(params_baseline.number_repeats)]:
 
                 if baseline_bool:
                     #Ad hoc solution - index may differ when multiple provinces
@@ -758,10 +778,10 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_policy, in_p
             print("No treatment entanglement")
 
         if treatment_entangled == True:
-            with open(tangled_folder_variables + treatment_scenario + '_timechange' + str(time_change) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + treatment_policy.name + '_timechange' + str(time_change) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
         else:
-            with open(tangled_folder_variables + treatment_scenario + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + treatment_policy.name + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
 
         # store interesting values
@@ -775,8 +795,8 @@ def do_iterate(params_list, it_dict_list, ics, prov_name, treatment_policy, in_p
         iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict}
 
         if treatment_entangled == True:
-            with open(tangled_folder_iterate + treatment_scenario + '_timechange' + str(int(time_change)) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + treatment_policy.name + '_timechange' + str(int(time_change)) + "_duration" + str(int(params.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
         else:
-            with open(tangled_folder_iterate + treatment_scenario + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + treatment_policy.name + '_' + prov_name + "_c" + str(it_dict['c'][0]) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)

@@ -171,9 +171,10 @@ def get_plot_data(data, t_start, t_end, t_step):
 
 
 params = model_params()
-treatments = ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"] #Must match file names. Options: ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"]]
+# treatments = ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"] #Must match file names. Options: ["Primaquine_Lowdose","Primaquine_Highdose","Tafenoquine"]]
+treatments = ["PLD","PHD","Taf"] #Must match file names. Options: ["PLD","PHD","Taf"]]
 colours = ['r','b','g', 'k'] #for plotting
-timechanges = [0, 36, 73] #which time changes you want to plot, in days. e.g.: [0, 730, 1461]
+timechanges = [0, 14, 29] #which time changes you want to plot, in days. e.g.: [0, 730, 1461]
 duration = int(params.time_day_end) #Simulation duration
 
 plt.close("all")
