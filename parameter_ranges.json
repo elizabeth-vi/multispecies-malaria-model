@@ -630,5 +630,38 @@
         "location": "",
         "level": "species_dependent_local",
         "symbol": "$\\tau$"
+    },
+    "alpha_hyp": {
+        "min": 0.00301,
+        "exp": 0.00301,
+        "max": 0.00301,
+        "description": "Rate of (single) hypnozoite activation",
+        "units": "per day",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\alpha_hyp$"
+    },
+    "mu_hyp": {
+        "min": 0.00235,
+        "exp": 0.00235,
+        "max": 0.00235,
+        "description": "Rate of (single) hypnozoite/hepatocyte death",
+        "units": "per day",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\mu_hyp$"
+    },
+    "nu_hyp": {
+        "min": 8.5,
+        "exp": 8.5,
+        "max": 8.5,
+        "description": "Average number of hypnozoites per new infection",
+        "units": "per day",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\nu_hyp$"
     }
 }

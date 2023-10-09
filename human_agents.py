@@ -34,35 +34,39 @@ class Agent(object):
         self.memory = ([], [])  # memory by species
 
         #Probabilities of [Severe, Intermediate, Normal] G6PD enzyme levels for XX and XY chromosomes
-        p_XY = [0.137, 0, 1-0.137]
         p_XX = [0.05, 0.158, (1-0.05-0.158)]
+        p_XY = [0.137, 0, 1-0.137]
+        p_inel = [0.08, 0.01] #[XX, XY]
+        
         
         #Assign sex chromosomes
-        r = random.random()
-        self.sex = random.randint(0,1) # XY=0, XX=1
+        r1 = random.random()
+        r2 = random.random()
+        self.sex = random.randint(0,1) # XX=0, XY=1
 
         #Assign true G6PD status
 
         #Ineligible
-        if r<0.15: #Use a different r
+        if r1 < p_inel[self.sex]:
             G6PD_level = None 
 
-        #male XY
-        if self.sex == 0: #XY
-            if r < p_XY[0]:   #Hemizygous male
-                G6PD_level = 0
-            else:               #Normal male
-                G6PD_level = 1
-        
-        # female XX
-        if self.sex == 1: #XX
-            if r < p_XX[0]:         #Homozygous female
-                G6PD_level = 0
-            elif r < sum(p_XX[0:2]):#Heterozygous female
-                G6PD_level = 0.5
-            else:                       #Normal female
-                G6PD_level = 1
 
+        # female XX
+        if self.sex == 0: #XX
+            if r2 < p_XX[0]:                            #Homozygous female
+                G6PD_level = random.uniform(0, 0.3)
+            elif r2 < sum(p_XX[0:2]):                   #Heterozygous female
+                G6PD_level = random.uniform(0.3, 0.7)
+            else:                                       #Normal female
+                G6PD_level = random.uniform(0.7, 1)
+
+        #male XY
+        elif self.sex == 1: #XY
+            if r2 < p_XY[0]:                            #Hemizygous male
+                G6PD_level = random.uniform(0, 0.3)
+            else:                                       #Normal male
+                G6PD_level = random.uniform(0.7, 1)
+        
         self.G6PD_level = G6PD_level
 
         #Treatment is a subclass of "G"
@@ -99,34 +103,47 @@ class Agent(object):
         self.G_treatment = None
         
 
-    #EDIT TO GIVE PROPER DISTRIBUTION
     def G6PD_test(self):
+        """
+        Return a G6PD test result based on patient's actual G6PD levels
+        """
+        #Currently works off brackets but is adaptable to vary based on results within a bracket, if evidence supports
         
-        #sex -add
-        sensitivity = [0.99, 0.44] #Sensitivity for [Severe, Intermediate] True Pos 
-        specificity = [0.99, 0.97] #Specificity for [Males, Females] True neg
+        #probability of getting a relevant test result
+        testing_prob = [[1.00, 0, 0], #For severe G6PD deficinecy, probability of [severe, intermediate, normal] test result
+                        [0.48, 0.42, 0.10], #For intermediate G6PD deficiency
+                        [0.01, 0.04, 0.95]] #For normal G6PD levels
 
         #ineligible
         if self.G6PD_level == None:
             return None
 
         r = random.random()
-        if self.G6PD_level < 0.3:
-            if r < sensitivity[0]:
-                return 0
-        elif self.G6PD_level < 0.7:
-            if r < sensitivity[1]:
-                return 0.5
-        else:
-            return 1
-        return 1
+
+        #Determine severity bracket
+        if self.G6PD_level < 0.3: #severe deficiency
+            severity = 0
+        elif self.G6PD_level < 0.7: #intermediate deficiency
+            severity = 1
+        else: #Normal levels
+            severity = 2
+        
+        #Determine test result based on bracket
+        if r < testing_prob[severity][0]: #severe test result
+            test_res = 0
+        elif r < testing_prob[severity][0] + testing_prob[severity][1]: #intermediate
+            test_res = 0.5
+        else: #normal
+            test_res = 1
+
+        return test_res
+        
+
     
     def assign_G_treatment(self, params, policy):
         """
         Assign and commence radical cure treatment, based on current treatment policy and G6PD status
         """
-
-        
 
         treatment = self.choose_treatment(policy)
         self.start_G_treatment(params, treatment)
