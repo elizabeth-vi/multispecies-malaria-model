@@ -663,5 +663,16 @@
         "location": "",
         "level": "species_dependent_local",
         "symbol": "$\\nu_hyp$"
+    },
+    "p_rad": {
+        "min": 0.9,
+        "exp": 0.9,
+        "max": 0.9,
+        "description": "Probability treatment will kill an individual hypnozoite",
+        "units": "Unitless",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\p_rad$"
     }
 }

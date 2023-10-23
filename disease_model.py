@@ -205,6 +205,23 @@ class Disease(object):
         person.state[self.species].next = _next
         person.state[self.species].time = _time
 
+    #### WIP, unused and incomplete
+    # def hypnozoite_transition_table(self, person, current_time, event_rates, params_list, treatment_policy):
+    
+    #     current_status = person.state[self.species].current  # just transitioned to this
+    #     params = params_list[treatment_policy]
+
+    #     #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+    #     for transition in person.transition_overrides:
+    #         event_rates[transition] = person.transition_overrides[transition]
+
+    #     #Update params for person-specific override value (e.g. different radical cure parameters)
+    #     for param in person.param_overrides:
+    #         setattr(params, param, person.param_overrides[param])
+
+    #     #determine what next transition is, and when (excepting infection)
+
+
     def triggering(self, person, current_time, event_rates, params):
         """
         Re-doing transition from current L to elsewhere due to recent falciparum infection, with increased nu_hat = Zf * nu
@@ -248,6 +265,10 @@ class Disease(object):
         for transition in person.transition_overrides:
             event_rates[transition] = person.transition_overrides[transition]
 
+        #Update params for person-specific override value (e.g. different radical cure parameters)
+        for param in person.param_overrides:
+            setattr(params, param, person.param_overrides[param])
+
         if person.state[self.species].time == current_time:  # an event has been scheduled for this time
             assert current_compartment not in [Compartments.dead, Compartments.just_died]
             # decrement population count for current state
@@ -262,7 +283,7 @@ class Disease(object):
 
             #If starting G treatment, assign a treatment and new params
             if person.state[self.species].next == Compartments.G:
-                person.assign_G_treatment(params_list, policy)
+                person.assign_G_treatment(params_list, policy, current_time)
 
             #If ending G treatment, undo these changes
             if person.state[self.species].current == Compartments.G:
@@ -276,6 +297,20 @@ class Disease(object):
             # continue as usual
             person.state[self.species].current = person.state[self.species].next  # transition occurs
             self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params_list=params_list, treatment_policy=policy)  # identify next transition to occur
+
+            if person.state[self.species].hypnozoites.time_next == current_time: #hypnozoite death/activation was scheduled for this time
+                person.state[self.species].hypnozoites.time_next += params.time_day_step #schedule for next timestep
+
+        elif person.state[self.species].hypnozoites.time_next == current_time: #hypnozoite death/activation scheduled for this time
+            assert current_compartment not in [Compartments.dead, Compartments.just_died]
+
+            self.pop_counts[current_compartment] -= 1 # decrement population count for current state
+            person.state[self.species].hypnozoites.update(person, self.species, current_time, p_clinical=params.pL[self.species]) #update number of hypnozoites and transition the human compartment
+            self.pop_counts[person.state[self.species].current] += 1 # increment population count for next state
+
+            # continue as usual
+            self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params_list=params_list, treatment_policy=policy)  # identify next transition to occur
+
         else:   # check for infection event
             if current_compartment == Compartments.S:
                 self.infect_me(person=person, rate_infection=event_rates[Transitions.S_inf], prob_I=params.pc[self.species], params_list=params_list, policy=policy, current_time=current_time, event_rates=event_rates)
@@ -287,11 +322,13 @@ class Disease(object):
 
     def infect_me(self, person, rate_infection, prob_I, params_list, policy, current_time, event_rates):
 
-        #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
-        for transition in person.transition_overrides:
-            event_rates[transition] = person.transition_overrides[transition]
+        params = params_list[policy]
 
         if random.random() < (1 - math.exp(-rate_infection)):
+            #Update transition table for person-specific override value (e.g. different radical cure treatment durations)
+            for transition in person.transition_overrides:
+                event_rates[transition] = person.transition_overrides[transition]
+
             self.new_infections.append(current_time)  # just moved to I or A *now*
             self.pop_counts[person.state[self.species].current] -= 1  # decrement count for current state
             if random.random() <= prob_I:
@@ -300,6 +337,7 @@ class Disease(object):
             else:
                 person.state[self.species].current = Compartments.A
 
+            person.state[self.species].hypnozoites.infect(mean=params.nu_hyp[self.species], current_time=current_time) #inject hypnozoites upon new primary infection
             self.pop_counts[person.state[self.species].current] += 1  # increment new current state
             self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params_list=params_list, treatment_policy=policy)  # determine next event and time it occurs
 

@@ -75,7 +75,7 @@ class model_params(object):
         self.mozzie_pop = self.human_population * self.mozzie_human_pop_ratio  # not sure if this belongs here or elsewhere
 
         # setting the falciparum values to zero to prevent the `L` compartment being used
-        not_falciparum_params = ['kappa', 'nu', 'pA', 'ph', 'pL', 'pP']
+        not_falciparum_params = ['kappa', 'nu', 'pA', 'ph', 'pL', 'pP', 'alpha_hyp', 'mu_hyp', 'nu_hyp']
         for name in not_falciparum_params:
             self.__setattr__(name, [0.0, self.__getattribute__(name)])
             self.param_mins[name] = [0.0, self.param_mins[name]]

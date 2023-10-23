@@ -135,6 +135,9 @@ class Run_Simulations(object):
         :param human_initial_counts: assuming this is a full array of counts of falciparum compartments by vivax compartments
         :return: updated agent population with distribution as per human_initial_counts
         """
+
+        params = params_list[policy]
+
         comps = [Compartments.S, Compartments.I, Compartments.A, Compartments.R, Compartments.L, Compartments.T, Compartments.G]
         # calculate things needed for all compartments
         pf_starting_event_rates = rates[Species.falciparum](params=self.params, mozzie=anophs, time=0)
@@ -157,9 +160,13 @@ class Run_Simulations(object):
                                                          event_rates=pv_starting_event_rates,
                                                          params_list=params_list, treatment_policy=Treatments.Baseline)
                     
+                    #Add hypnozoites for relevant classes
+                    if pv_cmp in [Compartments.I, Compartments.A, Compartments.L]:
+                        humans[agent_counter].state[Species.vivax].hypnozoites.infect(mean=params.nu_hyp[Species.vivax], current_time = self.params.time_start)
+
                     #Assign treatment for those in G
                     if pv_cmp == Compartments.G:
-                        humans[agent_counter].assign_G_treatment(params_list,policy)
+                        humans[agent_counter].assign_G_treatment(params_list,policy,current_time=self.params.time_start)
                     agent_counter += 1
 
         assert agent_counter == self.params.human_population, "not all agents assigned since total population = " + str(self.params.human_population) + ", but agents assigned = " + str(agent_counter)
@@ -322,8 +329,9 @@ class Run_Simulations(object):
         # mozzies
         anophs = Mozzies(mozzie_initial_inf=mozzie_initial_inf, human_initial_inf_comp_x_only=human_initial_inf_comp_x_only, human_initial_mixed=human_initial_mixed_all)
         anophs_y0 = initial_mozzie
+
         # humans
-        humans = [Agent(transition_time=self.params.time_end+1) for x in range(self.params.human_population)]
+        humans = [Agent(transition_time=self.params.time_end+1, params=self.params) for x in range(self.params.human_population)]
         humans = self.initialise_agent_compartments(rates=rates, params_list=params_list, policy=treatment_policy, diseases=diseases, anophs=anophs, humans=humans, human_initial_counts=initial_human_counts_full_combo)
 
         FSAT_indicator = np.zeros(self.params.time_end + self.params.FSAT_period)

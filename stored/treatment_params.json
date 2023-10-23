@@ -25,6 +25,10 @@
         "c": {
             "value": [0.3,1],
             "description": "treatment coverage level"
+        },
+        "p_rad": {
+            "value": 0.8,
+            "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
     "PHD": {
@@ -51,6 +55,10 @@
         "c": {
             "value": [0.3,1],
             "description": "treatment coverage level"
+        },
+        "p_rad": {
+            "value": 0.9,
+            "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
     "PG6PD": {
@@ -77,6 +85,10 @@
         "c": {
             "value": [0.3,1],
             "description": "treatment coverage level"
+        },
+        "p_rad": {
+            "value": 0.6,
+            "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
     "Taf": {
@@ -103,6 +115,10 @@
         "c": {
             "value": [0.3,1],
             "description": "treatment coverage level"
+        },
+        "p_rad": {
+            "value": 1.0,
+            "description": "Probability treatment will kill an individual hypnozoite"
         }
     }
 }

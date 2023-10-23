@@ -28,11 +28,9 @@ import gc
 ########################### for user to change #################################
 prov_file= './stored/sorted_calibrated_params2.json'
 prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calibrated_params2.json
-# treatment_options_list = ['Primaquine_Lowdose','Primaquine_Highdose','Tafenoquine'] #names need to exist in sorted_calibrated_params2.json 
 treatment_options_list = [Treatments.Baseline,Treatments.PLD,Treatments.PHD,Treatments.PG6PD,Treatments.Taf] #names need to exist in sorted_calibrated_params2.json
 treatment_policy_list = [Treatments.PLD,Treatments.PHD,Treatments.Taf] #Run for these primary policies
 #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
-#time_treatment_changes = [int(change_year * days_in_year / self.time_day_step) for change_year in [0, 2, 4]]
 treatment_changes_year = [0, 0.04, 0.08]
 treatment_file = './stored/treatment_params.json'
 
@@ -52,16 +50,11 @@ if __name__ == '__main__':
         #baseline run
         sim_codes.do_iterate([params_baseline], [it_dict_baseline], ics, prov_name, Treatments.Baseline, in_parallel)
         gc.collect()
-        # duration = str(int(params_baseline.time_day_end))
-        # baseline_file = "./stored/results_variables/duration_"+duration+"/baseline_timechange"+duration+"_duration"+duration+".json"
-
-        
 
         treatment_rates = [0]#pN_vec #assume unchanged when treatment changes - only used for size ************
         coverage_scenarios = [0]#c_vec #assume unchanged**********************************
-        # for iterate1 in range(len(pN_vec)):
+
         for iterate_treat in range(len(treatment_rates)):
-            #for iterate2 in range(len(c_vec)):
             for iterate_cov in range(len(coverage_scenarios)):
         
                 params = []
@@ -79,13 +72,6 @@ if __name__ == '__main__':
 
                 # treatment policy scenarios
                 for treatment_policy in treatment_policy_list:
-
-                    #parameters after changing radical cure treatment
-                    # calibrated_params_change, _ = model_params.use_calibrated_params(prov=prov_name,prov_file=prov_file,treatment=treatment_scenario,treatment_file=treatment_file)
-                    # it_dict_change = model_params.update_dict(it_dict, treatment_changes_year, iterate_treat, iterate_cov)
-                    # it_dict_change.update(calibrated_params_change)
-                    # params_treatment_change = model_params(**it_dict_change)
-
 
                     sim_codes.do_iterate(params, it_dict, ics, prov_name, treatment_policy, in_parallel, baseline_file=True)
                     gc.collect()

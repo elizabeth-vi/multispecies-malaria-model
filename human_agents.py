@@ -1,6 +1,68 @@
 from index_names import Compartments, Species, Transitions, Treatments
 import random
+import numpy as np
 
+
+class Hypnozoite(object):
+    """
+    The state of the latent-stage hypnozoites in the liver
+    :param number: number of hypnozoites currently in the liver
+    :param time_next: time of next natural hypnozoite event (death, activation)
+    :param alpha: rate of hypnozoite activation
+    :param mu: rate of hypnozoite death
+    """
+
+    __slots__ = ('number', 'time_next', 'alpha', 'mu')
+
+    def __init__(self, hyp_init, transition_time, hyp_params, species):
+        self.number = hyp_init #integer
+        self.time_next = transition_time #number
+        self.alpha = hyp_params.alpha_hyp[species] #number
+        self.mu = hyp_params.mu_hyp[species] #number
+
+    def infect(self, mean, current_time):
+        """
+        Add latent hypnozoites upon a new primary infection event
+        """
+        ni = self.number
+        self.number += np.random.geometric(p=1/(mean+1)) - 1
+        nj = self.number
+        if ni>0:
+            print("time = "+str(current_time)+str([ni, nj]))
+        self.update_transition_time(current_time)
+
+    def treat(self, p_death, current_time):
+        self.number = np.random.binomial(self.number,1-p_death)
+        self.update_transition_time(current_time)
+
+    def update_transition_time(self, current_time):
+        rate = self.number*(self.alpha+self.mu)
+
+        if rate != 0: #avoid divide by zero error
+            time = current_time + int(max(1, round(random.expovariate(rate), ndigits=0)))
+        else:
+            time = 1e10 #arbitary long time
+        self.time_next = time
+
+    
+    def update(self, person, species, current_time, p_clinical): 
+        """
+        Update hypnozoite status after natural event (death / activation)
+        Updates human compartment and hypnozoite transition time
+        """
+        assert self.number >= 1
+
+        self.number -= 1 #decrement by one
+        self.update_transition_time(current_time)
+
+        if random.random() < self.alpha/(self.alpha + self.mu): #activation
+            if random.random() < p_clinical: #clinical infection
+                person.state[species].current = Compartments.I #transition occurs
+            else: #asymptomatic
+                person.state[species].current = Compartments.A #transition occurs
+        else: #hypnozoite death
+            return #current_compartment
+        
 class Pathogen(object):
     """
     the `state' of this Disease, wrt
@@ -8,15 +70,19 @@ class Pathogen(object):
     :param.time: time of next event
     :param next: compartment transition to at time.time
     """
-    __slots__ = ('current', 'time', 'next')
+    __slots__ = ('current', 'time', 'next', 'hypnozoites')
 
-    def __init__(self, transition_time):
+    def __init__(self, transition_time, hyp_params, species):
         """
         :param transition_time: time of transition from default allocation to susceptible class
         """
         self.current = Compartments.S
         self.time = transition_time  # int(time_end + 1)  # effectively infinity
         self.next = Compartments.S  # no default change from this compartment type
+        self.hypnozoites = Hypnozoite(hyp_init = 0, transition_time=transition_time, hyp_params = hyp_params, species=species)
+
+            
+
 
 
 class Agent(object):
@@ -25,13 +91,15 @@ class Agent(object):
     """
     __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'transition_overrides', 'G_treatment', 'param_overrides'
 
-    def __init__(self, transition_time):
+    def __init__(self, transition_time, params):
         """
         initialise Agent as per the Pathogen object
         :param transition_time: time of transition from default allocation to susceptible class
         """
-        self.state = (Pathogen(transition_time=transition_time), Pathogen(transition_time=transition_time))  # todo: not hardcode this for 2 pathogens
+        self.state = (Pathogen(transition_time=transition_time, hyp_params=params, species = Species.falciparum), Pathogen(transition_time=transition_time, hyp_params=params, species=Species.vivax))  # todo: not hardcode this for 2 pathogens
         self.memory = ([], [])  # memory by species
+        hyp_init = [0,0] # hardcoded for 2 pathogens
+        # self.hypnozoites = Hypnozoite(hyp_init = hyp_init, transition_time=transition_time, alpha = params.alpha_hyp, mu = params.mu_hyp)
 
         #Probabilities of [Severe, Intermediate, Normal] G6PD enzyme levels for XX and XY chromosomes
         p_XX = [0.05, 0.158, (1-0.05-0.158)]
@@ -79,18 +147,23 @@ class Agent(object):
         self.param_overrides = {}
 
     #For radical cure treatment specifically
-    def start_G_treatment(self, params, treatment):
+    def start_G_treatment(self, species, params, treatment, current_time):
 
-        G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
+        assert species == Species.vivax
+
+        G_params = ["pTfP", "pP", "psi","pG","pN","c","p_rad"] #List of potential parameters that will change with varying radical cure treatment
 
         self.G_treatment = treatment
 
         #Rate out of G for specified treatment
-        self.transition_overrides[Transitions.G_done] = params[treatment].psi[Species.vivax]
+        self.transition_overrides[Transitions.G_done] = params[treatment].psi[species]
         
         #Add params to override defaults
         for param in G_params:
             self.param_overrides[param] = getattr(params[treatment],param)
+
+        #Treat hypnozoites
+        self.state[species].hypnozoites.treat(params[treatment].p_rad, current_time)
 
 
     def finish_G_treatment (self):
@@ -140,13 +213,13 @@ class Agent(object):
         
 
     
-    def assign_G_treatment(self, params, policy):
+    def assign_G_treatment(self, params, policy, current_time):
         """
         Assign and commence radical cure treatment, based on current treatment policy and G6PD status
         """
 
         treatment = self.choose_treatment(policy)
-        self.start_G_treatment(params, treatment)
+        self.start_G_treatment(species=Species.vivax, params=params, treatment=treatment, current_time=current_time)
 
 
     def choose_treatment(self,policy):
