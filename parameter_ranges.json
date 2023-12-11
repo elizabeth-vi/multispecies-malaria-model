@@ -597,7 +597,7 @@
         ],
         "exp": [
             0.0066,
-            6e-06
+            1e-06
         ],
         "max": [
             0.075,
@@ -665,14 +665,25 @@
         "symbol": "$\\nu_hyp$"
     },
     "p_rad": {
-        "min": 0.9,
-        "exp": 0.9,
-        "max": 0.9,
+        "min": 0.5,
+        "exp": 0.5,
+        "max": 0.5,
         "description": "Probability treatment will kill an individual hypnozoite",
         "units": "Unitless",
         "source": "Assumed",
         "location": "",
         "level": "species_dependent_local",
         "symbol": "$\\p_rad$"
+    },
+    "relapse_monitor": {
+        "min": 30,
+        "exp": 90,
+        "max": 300,
+        "description": "Time after treatment that a new clinical infection is noted as a relapse",
+        "units": "day",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\relapse_monitor$"
     }
 }

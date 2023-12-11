@@ -24,16 +24,19 @@ class Hypnozoite(object):
         """
         Add latent hypnozoites upon a new primary infection event
         """
-        ni = self.number
+
+        # ni = self.number
         self.number += np.random.geometric(p=1/(mean+1)) - 1
-        nj = self.number
-        if ni>0:
-            print("time = "+str(current_time)+str([ni, nj]))
+        # nj = self.number
+        # if ni>0:
+        #     print("time = "+str(current_time)+str([ni, nj]))
         self.update_transition_time(current_time)
 
     def treat(self, p_death, current_time):
+        # print("Treating. N_hyp start = "+str(self.number))
         self.number = np.random.binomial(self.number,1-p_death)
         self.update_transition_time(current_time)
+        # print("N_hyp ending "+str(self.number)+", next time = ",self.time_next)
 
     def update_transition_time(self, current_time):
         rate = self.number*(self.alpha+self.mu)
@@ -43,6 +46,7 @@ class Hypnozoite(object):
         else:
             time = 1e10 #arbitary long time
         self.time_next = time
+        # print(time)
 
     
     def update(self, person, species, current_time, p_clinical): 
@@ -50,18 +54,26 @@ class Hypnozoite(object):
         Update hypnozoite status after natural event (death / activation)
         Updates human compartment and hypnozoite transition time
         """
-        assert self.number >= 1
+        assert self.number >= 1, "cannot have hypnozoite birth/death with no hypnozoites"
+        # print(self.number)
 
         self.number -= 1 #decrement by one
         self.update_transition_time(current_time)
 
         if random.random() < self.alpha/(self.alpha + self.mu): #activation
-            if random.random() < p_clinical: #clinical infection
-                person.state[species].current = Compartments.I #transition occurs
-            else: #asymptomatic
-                person.state[species].current = Compartments.A #transition occurs
+            activation = True
+
+            current_compartment = person.state[species].current
+            if current_compartment in [Compartments.S, Compartments.A, Compartments.R]:
+                if random.random() < p_clinical: #clinical infection
+                    person.state[species].current = Compartments.I #transition occurs
+                else: #asymptomatic
+                    person.state[species].current = Compartments.A #transition occurs
+            
         else: #hypnozoite death
-            return #current_compartment
+            activation = False
+            
+        return activation
         
 class Pathogen(object):
     """
@@ -89,7 +101,7 @@ class Agent(object):
     """
     individuals in the human population
     """
-    __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'transition_overrides', 'G_treatment', 'param_overrides'
+    __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'transition_overrides', 'G_treatment', 'param_overrides', "recent_treatment"
 
     def __init__(self, transition_time, params):
         """
@@ -98,7 +110,8 @@ class Agent(object):
         """
         self.state = (Pathogen(transition_time=transition_time, hyp_params=params, species = Species.falciparum), Pathogen(transition_time=transition_time, hyp_params=params, species=Species.vivax))  # todo: not hardcode this for 2 pathogens
         self.memory = ([], [])  # memory by species
-        hyp_init = [0,0] # hardcoded for 2 pathogens
+        self.recent_treatment = - (params.relapse_monitor+1) #time of most recent treatment / health service visit, starts with no recent visit
+        # hyp_init = [0,0] # hardcoded for 2 pathogens
         # self.hypnozoites = Hypnozoite(hyp_init = hyp_init, transition_time=transition_time, alpha = params.alpha_hyp, mu = params.mu_hyp)
 
         #Probabilities of [Severe, Intermediate, Normal] G6PD enzyme levels for XX and XY chromosomes
@@ -113,11 +126,6 @@ class Agent(object):
         self.sex = random.randint(0,1) # XX=0, XY=1
 
         #Assign true G6PD status
-
-        #Ineligible
-        if r1 < p_inel[self.sex]:
-            G6PD_level = None 
-
 
         # female XX
         if self.sex == 0: #XX
@@ -134,6 +142,10 @@ class Agent(object):
                 G6PD_level = random.uniform(0, 0.3)
             else:                                       #Normal male
                 G6PD_level = random.uniform(0.7, 1)
+
+        #Ineligible - overrides above result if assigned
+        if r1 < p_inel[self.sex]:
+            G6PD_level = None 
         
         self.G6PD_level = G6PD_level
 
@@ -151,28 +163,40 @@ class Agent(object):
 
         assert species == Species.vivax
 
-        G_params = ["pTfP", "pP", "psi","pG","pN","c","p_rad"] #List of potential parameters that will change with varying radical cure treatment
+        if treatment == Treatments.Baseline:
+            return
+        # G_params = ["pTfP", "pP", "psi","pG","pN","c","p_rad"] #List of potential parameters that will change with varying radical cure treatment
+        # G_params = ["pTfP", "pP", "psi","pG","p_rad"] #List of potential parameters that will change with varying radical cure treatment
 
         self.G_treatment = treatment
+        treatment_params = params.treatment_params[treatment]
 
         #Rate out of G for specified treatment
-        self.transition_overrides[Transitions.G_done] = params[treatment].psi[species]
+        # self.transition_overrides[Transitions.G_done] = params[treatment].psi[species]
+
+
+        self.transition_overrides[Transitions.G_done] = treatment_params["psi"][species]
         
         #Add params to override defaults
-        for param in G_params:
-            self.param_overrides[param] = getattr(params[treatment],param)
+        # for param in G_params:
+        #     self.param_overrides[param] = getattr(params[treatment],param)
+        for param in treatment_params:
+            self.param_overrides[param] = treatment_params[param]
 
         #Treat hypnozoites
-        self.state[species].hypnozoites.treat(params[treatment].p_rad, current_time)
+        # self.state[species].hypnozoites.treat(params[treatment].p_rad, current_time)
+        self.state[species].hypnozoites.treat(treatment_params["p_rad"], current_time)
 
 
     def finish_G_treatment (self):
 
-        G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
+        # G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
 
-        del self.transition_overrides[Transitions.G_done]
-        for param in G_params:
-            del self.param_overrides[param]
+        # del self.transition_overrides[Transitions.G_done]
+        # for param in G_params:
+        #     del self.param_overrides[param]
+        self.transition_overrides = {}
+        self.param_overrides = {}
         self.G_treatment = None
         
 
@@ -188,8 +212,7 @@ class Agent(object):
                         [0.01, 0.04, 0.95]] #For normal G6PD levels
 
         #ineligible
-        if self.G6PD_level == None:
-            return None
+        assert self.G6PD_level is not None, "giving G6PD test to ineligible person"
 
         r = random.random()
 
@@ -223,33 +246,14 @@ class Agent(object):
 
 
     def choose_treatment(self,policy):
-        
+
         G6PD_test = self.G6PD_test()
-        if policy == Treatments.Baseline:
-            return Treatments.Baseline
+        for i in range(len(policy["G6PD_maxes"])):
+            if G6PD_test <= policy["G6PD_maxes"][i]:
+                return policy["treatments"][i]
         
-        elif policy == Treatments.PLD:
-            if G6PD_test <= 0.3:
-                return Treatments.PG6PD
-            else:
-                return Treatments.PLD
-            
-        elif policy == Treatments.PHD:
-            if G6PD_test <= 0.7:
-                return Treatments.PG6PD
-            else:
-                return Treatments.PHD
-            
-        elif policy == Treatments.Taf:
-            if G6PD_test <= 0.7:
-                return Treatments.PG6PD
-            else:
-                return Treatments.Taf
-        
-        print("Error: Policy is not listed")
+        print("Error: Policy "+str(policy)+" is not listed")
         quit()
-                         
-                         
                          
                          
                          

@@ -1,33 +1,73 @@
 {
     "Baseline": {
-    },
-    "PLD": {
         "pTfP": {
-            "value": [0.03,0.5],
+            "value": [0.03,0.03],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
-        "pP": {
-            "value": 0.5,
-            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
-        },
         "psi": {
-            "value": [0.142,0.142],
+            "value": [0.142,0.071],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
         "pG": {
-            "value": [0.0066,0.0000000001],
+            "value": [0.0066,0.000001],
             "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
         },
-        "pN": {
-            "value": [1.0,0.2],
-            "description": "Probability get non-radical-cure based treatment (i.e. get ACT-based treatment)"
+        "p_rad": {
+            "value": 0.5,
+            "description": "Probability treatment will kill an individual hypnozoite"
+        }
+    },
+    "ACT": {
+        "pTfP": {
+            "value": [0.03,0.03],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
-        "c": {
-            "value": [0.3,1],
-            "description": "treatment coverage level"
+        "psi": {
+            "value": [0.142,0.33],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.000001],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
         },
         "p_rad": {
-            "value": 0.8,
+            "value": 0,
+            "description": "Probability treatment will kill an individual hypnozoite"
+        }
+    },
+    "PG6PD": {
+        "pTfP": {
+            "value": [0.03,0.03],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "psi": {
+            "value": [0.142,0.0178],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.000001],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        },
+        "p_rad": {
+            "value": 0.2,
+            "description": "Probability treatment will kill an individual hypnozoite"
+        }
+    },
+    "PLD": {
+        "pTfP": {
+            "value": [0.03,0.03],
+            "description": "Probability of radical cure (primaquine-based treatment) failure"
+        },
+        "psi": {
+            "value": [0.142,0.071],
+            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
+        },
+        "pG": {
+            "value": [0.0066,0.000001],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+        },
+        "p_rad": {
+            "value": 0.5,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
@@ -36,88 +76,35 @@
             "value": [0.03,0.03],
             "description": "UNCHANGED PARAMS FROM BASELINE. Probability of radical cure (primaquine-based treatment) failure"
         },
-        "pP": {
-            "value": 0.217,
-            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
-        },
         "psi": {
-            "value": [0.142,0.142],
+            "value": [0.142,0.071],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
         "pG": {
             "value": [0.0066,0.000001],
             "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
         },
-        "pN": {
-            "value": [1.0,0.2],
-            "description": "Probability get non-radical-cure based treatment (i.e. get ACT-based treatment)"
-        },
-        "c": {
-            "value": [0.3,1],
-            "description": "treatment coverage level"
-        },
         "p_rad": {
-            "value": 0.9,
+            "value": 0.7,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
-    "PG6PD": {
-        "pTfP": {
-            "value": [0.03,0.001],
-            "description": "Probability of radical cure (primaquine-based treatment) failure"
-        },
-        "pP": {
-            "value": 0.01,
-            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
-        },
-        "psi": {
-            "value": [0.142,0.142],
-            "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
-        },
-        "pG": {
-            "value": [0.0066,0.01],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
-        },
-        "pN": {
-            "value": [1.0,0.2],
-            "description": "Probability get non-radical-cure based treatment (i.e. get ACT-based treatment)"
-        },
-        "c": {
-            "value": [0.3,1],
-            "description": "treatment coverage level"
-        },
-        "p_rad": {
-            "value": 0.6,
-            "description": "Probability treatment will kill an individual hypnozoite"
-        }
-    },
+
     "Taf": {
         "pTfP": {
             "value": [0.03,0.001],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
-        "pP": {
-            "value": 0.01,
-            "description": "Probability of recovering with hypnozoites after radical cure (primaquine-based treatment)"
-        },
         "psi": {
-            "value": [0.142,0.142],
+            "value": [0.142,0.066666],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
         "pG": {
-            "value": [0.0066,0.01],
+            "value": [0.0066,0.000001],
             "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
         },
-        "pN": {
-            "value": [1.0,0.2],
-            "description": "Probability get non-radical-cure based treatment (i.e. get ACT-based treatment)"
-        },
-        "c": {
-            "value": [0.3,1],
-            "description": "treatment coverage level"
-        },
         "p_rad": {
-            "value": 1.0,
+            "value": 0.9,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     }

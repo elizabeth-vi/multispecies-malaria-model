@@ -10,13 +10,11 @@
 # sys.path.append(directory.parent.parent)
  
 
-from index_names import Species, Compartments
+from index_names import Species, Compartments, Treatments
 import json
 import numpy as np
 #from parameter_values import *
 import math
-
-days_in_year = 365.25
 
 class model_params(object):
     def __init__(self, **kwargs):
@@ -31,9 +29,10 @@ class model_params(object):
         self.number_compartments = 7
 
         # set time related parameters
+        self.days_in_year = 365.25
         self.time_day_start = 0
-        duration_years = 1
-        self.time_day_end = int(duration_years* days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
+        duration_years = 10
+        self.time_day_end = int(duration_years* self.days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
@@ -41,13 +40,13 @@ class model_params(object):
         self.time_vec = np.arange(start=self.time_day_start, stop=self.time_day_end, step=self.time_day_step)
 
 
-        #Added for p. vivax-only research. Changes implemented at time specified by time_treatment_changes, eg [0, 730, 1461]
-        if "treatment_changes_year" in kwargs:
-            treatment_changes_year = kwargs["treatment_changes_year"]
-        else:
-            treatment_changes_year = [duration_years]
-        # self.time_day_treatment_changes = [int(year * days_in_year) for year in treatment_changes_year]
-        self.time_treatment_changes = [int(year * days_in_year / self.time_day_step) for year in treatment_changes_year]
+        # #Added for p. vivax-only research. Changes implemented at time specified by time_treatment_changes, eg [0, 730, 1461]
+        # if "treatment_changes_year" in kwargs:
+        #     treatment_changes_year = kwargs["treatment_changes_year"]
+        # else:
+        #     treatment_changes_year = [duration_years]
+        # # self.time_day_treatment_changes = [int(year * days_in_year) for year in treatment_changes_year]
+        # self.time_treatment_changes = [int(year * days_in_year / self.time_day_step) for year in treatment_changes_year]
 
         # convert time to units of time_day_step
         self.time_start = int(self.time_day_start / self.time_day_step) #REMOVED ROUNDING, just floor it through int()
@@ -59,7 +58,13 @@ class model_params(object):
 
         self.human_population = 1000
         self.mozzie_human_pop_ratio = 3  # i.e. number of mosquitoes for each human
-        self.period = days_in_year
+        self.period = self.days_in_year
+        self.G6PD_band_ends = [0.3, 0.7, 1.0]
+
+        self.policy = {}
+        self.policy["G6PD_maxes"] = [1.0]
+        self.policy["treatments"] = [Treatments.Baseline]
+        self.treatment_params = {}
 
         # transmission model parameters
 
@@ -231,14 +236,13 @@ class model_params(object):
 
         return it_dict
 
-    def update_dict(it_dict, treatment_changes_year=None, i1=0, i2=0,):
+    def update_dict(it_dict, i1=0, i2=0,):
         #includes hard-coded parameter values: adjust
 
         it_dict = dict(it_dict)
-        if treatment_changes_year:
-            it_dict["treatment_changes_year"] = treatment_changes_year
-            print("it dict")
-            print(it_dict["treatment_changes_year"])
+        # if treatment_changes_year:
+        #     it_dict["treatment_changes_year"] = treatment_changes_year
+
 
         p_mask = 0.50
         mda1 = [270.0]  # lower bound of when MDA occurs
@@ -295,8 +299,9 @@ class model_params(object):
         return it_dict
 
     # read parameters from calibrated values
-    def use_calibrated_params(prov,prov_file,treatment=None,treatment_file=None):
+    def use_calibrated_params(prov,prov_file,treatment_file=None):
         params = dict()
+        params["treatment_params"]=dict()
 
         # update the default parameter values using parameter values stored in `./sorted_calibrated_params.json`, after `parameter-play.py` processes the values in `./stored/model_calibration_params.json`, which were generated from `calibrated_to_cambodia_data.py`,
         with open(prov_file) as prov_file:
@@ -305,14 +310,19 @@ class model_params(object):
         for keys in prov_data[prov]:
             params[keys] = prov_data[prov][keys]
 
-        if treatment!=None:
-            print(treatment.name)
-            with open(treatment_file) as treat_file:
-                treat_data = json.load(treat_file)
-                
-            for keys in treat_data[treatment.name]:
-                #Note: formatted to have value and description. Can edit treatment_params to not have "value"
-                params[keys] = treat_data[treatment.name][keys]["value"] #RC treatment only applicable to p vivax
+
+        with open(treatment_file) as treat_file:
+            treat_data = json.load(treat_file)
+            
+        for treatment in treat_data:
+            print(treatment)
+            params["treatment_params"][Treatments[treatment]]=dict()
+            #Note: formatted to have value and description. Can edit treatment_params to not have "value"
+            # params[keys] = treat_data[treatment.name][keys]["value"] #RC treatment only applicable to p vivax
+            for key in treat_data[treatment]:
+                params["treatment_params"][Treatments[treatment]][key] = treat_data[treatment][key]["value"] #RC treatment only applicable to p vivax
+            # params.treatment_params[treatment]
+            print(params["treatment_params"][Treatments[treatment]])
 
         ics = params['ics']
         del params['ics']

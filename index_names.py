@@ -51,7 +51,8 @@ class Transitions(IntEnum):
 
 class Treatments(IntEnum):
     Baseline = 0
-    PLD = 1 #Primaquine Lowdose
-    PHD = 2 #Primaquine Highdose
-    PG6PD = 3 #Primaquine G6PD-safe
-    Taf = 4 #Tafenoquine
+    ACT = 1
+    PLD = 2 #Primaquine Lowdose
+    PHD = 3 #Primaquine Highdose
+    PG6PD = 4 #Primaquine G6PD-safe
+    Taf = 5 #Tafenoquine
