@@ -447,8 +447,8 @@ class Run_Simulations(object):
                     #print("\nt = "+str(t))
                     #print("Quitting for testing purposes, line 338")
                     #quit()
-                if (t % 100 == 0):
-                    print("t = " + str(t))
+                # if (t % 100 == 0):
+                #     print("t = " + str(t))
 
                 if self.params.FSAT == True:
                     possible_detections = human_pop_pf_history[t - 1][1] + human_pop_pf_history[t - 1][2] + \
