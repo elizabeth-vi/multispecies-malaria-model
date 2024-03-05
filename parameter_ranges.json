@@ -108,7 +108,7 @@
         ],
         "exp": [
             0.03,
-            0.03
+            0.00529
         ],
         "max": [
             0.1,
@@ -357,7 +357,7 @@
         ],
         "exp": [
             0.142,
-            0.142
+            0.025
         ],
         "max": [
             0.5,
@@ -597,7 +597,7 @@
         ],
         "exp": [
             0.0066,
-            1e-06
+            0.0038
         ],
         "max": [
             0.075,
@@ -685,5 +685,16 @@
         "location": "",
         "level": "species_dependent_local",
         "symbol": "$\\relapse_monitor$"
+    },
+    "p_haem_death": {
+        "min": 0.01,
+        "exp": 0.01,
+        "max": 0.01,
+        "description": "Probability of dying if experiencing haemolysis (= probability of being untreated * probability of death if untreated",
+        "units": "Unitless",
+        "source": "Assumed",
+        "location": "",
+        "level": "species_dependent_local",
+        "symbol": "$\\p_haem_death$"
     }
 }

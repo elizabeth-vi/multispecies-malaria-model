@@ -30,16 +30,18 @@ prov_file= './stored/sorted_calibrated_params2.json'
 # prov_list_epidemics = ['Example_Province'] # names need to exist in sorted_calibrated_params2.json
 scenario_list = ['Scenario_Low_Treatment','Scenario_High_Treatment']
 treatment_options_list = [Treatments.Baseline,Treatments.PLD,Treatments.PHD,Treatments.PG6PD,Treatments.Taf] #names need to exist in sorted_calibrated_params2.json
-treatment_policy_list = [Treatments.PLD,Treatments.PHD,Treatments.Taf] #Run for these primary policies
+treatment_policy_list = [Treatments.PLD,Treatments.Taf] #Run for these primary policies
 #Added for p. vivax-only research. Changes implemented at the start (year 0), year 4, year 8.
-scenario_changes_year = [[0], [4], [8]]
+scenario_changes_year = [[0+5], [4+5], [8+5]]
+# scenario_changes_year = [[4+5]]
 # self.time_treatment_changes = [int(year * days_in_year / self.time_day_step) for year in treatment_changes_year]
 #Scenarios [before timechange, after timechange]
 # ********scenarios = [[Treatments.Baseline, Treatments.PLD], [Treatments.Baseline, Treatments.PHD], [Treatments.Baseline, Treatments.Taf]]
 policies = {}
-policies[Treatments.Baseline] = {"G6PD_maxes": [0.7, 1.0], "treatments": [Treatments.ACT, Treatments.Baseline]}
+policies[Treatments.Baseline] = {"G6PD_maxes": [0.7, 1.0], "treatments": [Treatments.CQ, Treatments.PLD]} #amend - properiotn given radical cure
+
 policies[Treatments.PLD] = {"G6PD_maxes": [0.3, 1.0], "treatments": [Treatments.PG6PD, Treatments.PLD]}
-policies[Treatments.PHD] = {"G6PD_maxes": [0.3, 0.7, 1.0], "treatments": [Treatments.PG6PD, Treatments.PLD, Treatments.PHD]}
+# policies[Treatments.PHD] = {"G6PD_maxes": [0.3, 0.7, 1.0], "treatments": [Treatments.PG6PD, Treatments.PLD, Treatments.PHD]}
 policies[Treatments.Taf] = {"G6PD_maxes": [0.3, 0.7, 1.0], "treatments": [Treatments.PG6PD, Treatments.PLD, Treatments.Taf]}
 
 

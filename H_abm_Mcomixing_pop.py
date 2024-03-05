@@ -11,6 +11,8 @@ from enum import IntEnum
 import json
 import os
 from copy import copy
+from collections import defaultdict
+
 
 # import classes I've written
 from index_names import Species, Compartments, Mozzie_labels, Treatments, Transitions
@@ -283,6 +285,23 @@ class Run_Simulations(object):
                     hypnozoite_status_by_G6PD[0] += 1 #ineligible for treatment
 
         return hypnozoite_status_by_G6PD
+    
+    def hypnozoite_distribution(self, humans, species):
+        """Returns an array with elements a_j storing how many humans have j hypnozoites"""
+
+        #Count using dict
+        n_hyp_dict = defaultdict(int)
+        for human in humans:
+            num_hypnozoites = human.state[species].hypnozoites.number
+            n_hyp_dict[num_hypnozoites] += 1
+        max_hyp = max(n_hyp_dict)
+
+        #Convert dict to count array
+        n_hyp_array = [0]*(max_hyp+1)
+        for key in n_hyp_dict.keys():
+            n_hyp_array[key] = n_hyp_dict[key]
+
+        return n_hyp_array
 
     def run_me(self, time_changes, params_list, baseline_file_bool, num_repeats):
 
@@ -379,7 +398,9 @@ class Run_Simulations(object):
         #Track number of people who have hypnozoites, with G6PD activity within [0-30, 30-70, 70-100]
 
         G6PD_hypnozoites = [None]*self.params.time_end 
-        G6PD_hypnozoites[self.params.time_start] = self.hypnozoite_status_by_G6PD(humans=humans, band_ends=[0.3, 0.7, 1.0], species=Species.vivax)
+        G6PD_hypnozoites[self.params.time_start] = self.hypnozoite_status_by_G6PD(humans=humans, band_ends=self.params.G6PD_band_ends, species=Species.vivax)
+        hyp_dist = [None]*len(self.params.hyp_snapshot_days)
+
         num_G6PD = self.count_agents_G6PD(humans=humans, band_ends=self.params.G6PD_band_ends)
 
 
@@ -648,7 +669,10 @@ class Run_Simulations(object):
                 human_pop_pv_history[t] = diseases[Species.vivax].pop_counts.copy()
                 human_pop_mixed_inf_history[t] = mixed_counter #sum([sum(mixed_counter[idx]) for idx in range(4)])
                 G6PD_hypnozoites[t] = self.hypnozoite_status_by_G6PD(humans=humans, band_ends=self.params.G6PD_band_ends, species=Species.vivax)
-
+                
+                if t in self.params.hyp_snapshot_days:
+                    t_index = self.params.hyp_snapshot_days.index(t)
+                    hyp_dist[t_index] = [t, self.hypnozoite_distribution(humans, species = Species.vivax)]
 
                 # now update the Mozzies
                 # solve ODEs using previous timestep human counts
@@ -691,7 +715,7 @@ class Run_Simulations(object):
         actual_relapses = [diseases[Species.falciparum].num_relapses, diseases[Species.vivax].num_relapses]
         relapses_recorded = [diseases[Species.falciparum].relapse_recorded, diseases[Species.vivax].relapse_recorded]
 
-        return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, actual_relapses, relapses_recorded, humans, anophs, num_TGD, G6PD_hypnozoites, num_G6PD ### total T, G, death: added [9] ###
+        return human_pop_pf_history, human_pop_pv_history, human_pop_mixed_inf_history, mozzie_pop_inf_history, mozzie_pop_history, pf_outcomes, pv_outcomes, actual_relapses, relapses_recorded, humans, anophs, num_TGD, G6PD_hypnozoites, num_G6PD, hyp_dist ### total T, G, death: added [9] ###
 
 def convert(o):
     """ from: https://stackoverflow.com/questions/11942364/typeerror-integer-is-not-json-serializable-when-serializing-json-in-python"""
@@ -748,6 +772,7 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
         num_TGD = []
         G6PD_hypnozoites = []
         num_G6PD = []
+        hyp_dist = []
 
         baseline_bool = False
 
@@ -832,6 +857,7 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
                     num_TGD.append(f[11])
                     G6PD_hypnozoites.append(f[12])
                     num_G6PD.append(f[13])
+                    hyp_dist.append(f[14])
         else:
             start = time.time()
 
@@ -863,8 +889,8 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
         print('Finished stochastic runs')
 
         outfilename = "./stored/results_not_entangled/" #Modified from "all_things" to "not_entangled"
-        tangled_folder_variables = "./stored/results_variables/duration_"+str(int(params_start.time_day_end))+"/"
-        tangled_folder_iterate = "./stored/results_iterate/duration_"+str(int(params_start.time_day_end))+"/"
+        tangled_folder_variables = "./stored/results_variables/duration_"+str(int(params_start.time_day_end))+"_"+str(os.getpid())+"/"
+        tangled_folder_iterate = "./stored/results_iterate/duration_"+str(int(params_start.time_day_end))+"_"+str(os.getpid())+"/"
 
         try:
             os.makedirs(tangled_folder_variables, exist_ok = True)
@@ -877,7 +903,7 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
             quit()
 
         # saving results to file
-        results = {'human_pop_pf_history': human_pf, 'human_pop_pv_history': human_pv, 'human_pop_mixed_inf_history': human_mixed_infectious, 'mozzie_pf_infectious': mozzie_pf_infectious, 'mozzie_pv_infectious': mozzie_pv_infectious, 'mozzie_mixed_infectious': mozzie_mixed_infectious, 'mozzie_pop_history': mozzie_all, 'pf_outcomes': pf_outcomes, 'pv_outcomes': pv_outcomes, 'pv_actual_relapses':pv_actual_relapses, 'pv_recorded_relapses':pv_recorded_relapses ,'num_TGD': num_TGD, 'G6PD_hypnozoites': G6PD_hypnozoites, 'num_G6PD': num_G6PD}#, 'agent_info': human_agents}#, 'mozzie_info': mozzie_info, 'num_TGD': num_TGD}
+        results = {'human_pop_pf_history': human_pf, 'human_pop_pv_history': human_pv, 'human_pop_mixed_inf_history': human_mixed_infectious, 'mozzie_pf_infectious': mozzie_pf_infectious, 'mozzie_pv_infectious': mozzie_pv_infectious, 'mozzie_mixed_infectious': mozzie_mixed_infectious, 'mozzie_pop_history': mozzie_all, 'pf_outcomes': pf_outcomes, 'pv_outcomes': pv_outcomes, 'pv_actual_relapses':pv_actual_relapses, 'pv_recorded_relapses':pv_recorded_relapses ,'num_TGD': num_TGD, 'G6PD_hypnozoites': G6PD_hypnozoites, 'num_G6PD': num_G6PD, 'hypnozoite_dist': hyp_dist}#, 'agent_info': human_agents}#, 'mozzie_info': mozzie_info, 'num_TGD': num_TGD}
 
         if it_dict_start['flag_entangled_treatment'] == 1:
             treatment_entangled = True

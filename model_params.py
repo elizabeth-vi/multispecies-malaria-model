@@ -31,7 +31,7 @@ class model_params(object):
         # set time related parameters
         self.days_in_year = 365.25
         self.time_day_start = 0
-        duration_years = 10
+        duration_years = 15
         self.time_day_end = int(duration_years* self.days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
@@ -60,6 +60,9 @@ class model_params(object):
         self.mozzie_human_pop_ratio = 3  # i.e. number of mosquitoes for each human
         self.period = self.days_in_year
         self.G6PD_band_ends = [0.3, 0.7, 1.0]
+        self.hyp_snapshot_years = range(5,duration_years+1)
+        self.hyp_snapshot_days = [round(year*self.days_in_year) for year in self.hyp_snapshot_years]
+        self.hyp_snapshot_days[-1] += -1
 
         self.policy = {}
         self.policy["G6PD_maxes"] = [1.0]

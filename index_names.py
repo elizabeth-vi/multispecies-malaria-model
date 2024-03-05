@@ -51,7 +51,7 @@ class Transitions(IntEnum):
 
 class Treatments(IntEnum):
     Baseline = 0
-    ACT = 1
+    CQ = 1 #Chloroquine-only
     PLD = 2 #Primaquine Lowdose
     PHD = 3 #Primaquine Highdose
     PG6PD = 4 #Primaquine G6PD-safe

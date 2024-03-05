@@ -8,6 +8,14 @@
             "value": [0.142,0.071],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
             "value": [0.0066,0.000001],
             "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
@@ -17,18 +25,26 @@
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
-    "ACT": {
+    "CQ": {
         "pTfP": {
-            "value": [0.03,0.03],
+            "value": [0.03,0.00529],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
         "psi": {
-            "value": [0.142,0.33],
+            "value": [0.142,0.025],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
-            "value": [0.0066,0.000001],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+            "value": [0.0066,0.0038],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death (non-haemolysis)"
         },
         "p_rad": {
             "value": 0,
@@ -37,74 +53,106 @@
     },
     "PG6PD": {
         "pTfP": {
-            "value": [0.03,0.03],
+            "value": [0.03,0.0000155],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
         "psi": {
-            "value": [0.142,0.0178],
+            "value": [0.142,0.0179],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0.3,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0.05555,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
-            "value": [0.0066,0.000001],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+            "value": [0.0066,0.0038],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death (non-haemolysis)"
         },
         "p_rad": {
-            "value": 0.2,
+            "value": 0.732,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
     "PLD": {
         "pTfP": {
-            "value": [0.03,0.03],
+            "value": [0.03,0.0000155],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
         "psi": {
-            "value": [0.142,0.071],
+            "value": [0.142,0.0714],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0.3,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0.109,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
-            "value": [0.0066,0.000001],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+            "value": [0.0066,0.0038],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death (non-haemolysis)"
         },
         "p_rad": {
-            "value": 0.5,
+            "value": 0.732,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
     "PHD": {
         "pTfP": {
-            "value": [0.03,0.03],
+            "value": [0.03,0.0000155],
             "description": "UNCHANGED PARAMS FROM BASELINE. Probability of radical cure (primaquine-based treatment) failure"
         },
         "psi": {
-            "value": [0.142,0.071],
+            "value": [0.142,0.0714],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0.7,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0.109,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
-            "value": [0.0066,0.000001],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+            "value": [0.0066,0.0038],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death (non-haemolysis)"
         },
         "p_rad": {
-            "value": 0.7,
+            "value": 0.8,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     },
 
     "Taf": {
         "pTfP": {
-            "value": [0.03,0.001],
+            "value": [0.03,0.0000155],
             "description": "Probability of radical cure (primaquine-based treatment) failure"
         },
         "psi": {
             "value": [0.142,0.066666],
             "description": "Inverse of average duration infectious after treatment that includes radical cure (e.g. primaquine) has begun"
         },
+        "haem_threshold": {
+            "value": 0.7,
+            "description": "G6PD activity level at which haemolysis may occur"
+        },
+        "p_haem": {
+            "value": 0.109,
+            "description": "Probability of experiencing haemolysis if given treatment when G6PD levels below threshold"
+        },
         "pG": {
-            "value": [0.0066,0.000001],
-            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death"
+            "value": [0.0066,0.0038],
+            "description": "Probability of radical cure (primaquine-based) treated malaria resulting in death (non-haemolysis)"
         },
         "p_rad": {
-            "value": 0.9,
+            "value": 0.642,
             "description": "Probability treatment will kill an individual hypnozoite"
         }
     }

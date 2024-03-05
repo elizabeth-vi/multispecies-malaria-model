@@ -3,7 +3,6 @@ __pycache__/
 stored/old_results/
 stored/results_iterate/
 stored/results_iterate_nohyp/
-stored/results_variables/*
+stored/results_variables/
 stored/results_variables_nohyp/
 stored/figs
-!stored/results_variables/duration_1827

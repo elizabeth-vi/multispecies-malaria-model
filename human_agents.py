@@ -183,6 +183,10 @@ class Agent(object):
         for param in treatment_params:
             self.param_overrides[param] = treatment_params[param]
 
+            if param == "pG":
+                if self.G6PD_level < treatment_params["haem_threshold"]:
+                    self.param_overrides[param] = np.add(treatment_params[param],treatment_params["p_haem"]*params.p_haem_death).tolist()
+
         #Treat hypnozoites
         # self.state[species].hypnozoites.treat(params[treatment].p_rad, current_time)
         self.state[species].hypnozoites.treat(treatment_params["p_rad"], current_time)
