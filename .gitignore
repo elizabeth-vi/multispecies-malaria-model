@@ -1,5 +1,6 @@
 __pycache__/
 .DS_Store/
+stored.DS_Store
 stored/results_iterate/
 stored/results_variables/
 stored/figs
