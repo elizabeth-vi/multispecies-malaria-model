@@ -16,7 +16,7 @@ class Disease(object):
         :param malaria_species: which malaria species this instantiation is for
         :param initial_population_counts: initial human population in each compartment
         """
-        self.pop_counts = initial_population_counts  # last one is for `just_died`
+        self.pop_counts = initial_population_counts.copy()  # last one is for `just_died`
         self.species = malaria_species
 
         # things tracking for later analysis. i.e. `outputs of interest`
@@ -32,6 +32,8 @@ class Disease(object):
         self.new_G = []
 
     def calculate_time(self, current_time, rate):
+        if rate==0:
+            return 99999999
         return current_time + int(max(1, round(random.expovariate(rate), ndigits=0)))
     
     def transition_table(self, person, current_time, event_rates, params, treatment_policy):
@@ -72,8 +74,12 @@ class Disease(object):
 
         elif current_status == Compartments.I:
             # I->death/A or I->T/G happens first
-            time_next = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.I_next])
-            time_treat = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.I_treat])
+            if random.random() < params.pTreat[self.species]: #seek treatment
+                time_treat = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.I_treat])
+                time_next = 3 * params.time_end #i.e. never
+            else: #naturally transition
+                time_next = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.I_next])
+                time_treat = 3 * params.time_end #i.e. never
 
             # MDA should affect the I compartment too
             if event_rates[Transitions.A_treat] == 0:  # avoiding a divide by zero error
@@ -93,7 +99,7 @@ class Disease(object):
                 _time = time_treat
 
                 # MASKING LOGIC
-                if (person.state[Species.falciparum].current == Compartments.I or person.state[Species.falciparum].current == Compartments.A) and (person.state[Species.vivax].current == Compartments.I or person.state[Species.vivax].current == Compartments.A): #if mixed infection masking is possible
+                if (person.state[Species.falciparum].current in [Compartments.A, Compartments.I]) and (person.state[Species.vivax].current in [Compartments.A, Compartments.I]): #if mixed infection masking is possible
                     
                     if random.random() < params.mask_prob: #treat with prob treat with T given masking may occur
                         _next = Compartments.T
@@ -101,11 +107,9 @@ class Disease(object):
                         _next = Compartments.G
 
                 else:
-                    # if random.random() < params.pN[self.species]:
-                    #     _next = Compartments.T
-                    # else:
-                    #     _next = Compartments.G
-                    if random.random() < 1 - params.pN[self.species]: #seeks / is recommended radical cure treatment
+                    #Check if prescribed radical cure treatment (if eligible)
+                    if random.random() < 1 - params.pN[self.species]:
+
                         if person.G6PD_level is None: #ineligible for G6PD treatment, no test administered
                             _next = Compartments.T
                         else: 
@@ -178,7 +182,7 @@ class Disease(object):
             self.new_T.append(current_time)  # just got to treatment
             _time = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.T_done])
             if random.random() < params.pT[self.species]:  # malaria death
-                self.T_deaths.append(person.state[self.species].time)
+                self.T_deaths.append(_time)
                 _next = Compartments.just_died  # a flag in run_me to update all pathogen compartments and human population size as recoreded in Mozzies
             else:  # 1 - pT
                 if random.random() < params.pTfA[self.species]:  # treatment failure
@@ -197,7 +201,7 @@ class Disease(object):
             _time = self.calculate_time(current_time=current_time, rate=event_rates[Transitions.G_done])
             
             if random.random() < params.pG[self.species]:  # malaria death
-                self.G_deaths.append(person.state[self.species].time)
+                self.G_deaths.append(_time)
                 _next = Compartments.just_died  # remove from compartments do anything with
             else:  # 1 - pG
                 if random.random() < params.pTfP[self.species]:  # treatment failure
@@ -274,37 +278,43 @@ class Disease(object):
 
         # STANDARD TRANSITIONS
         if person.state[self.species].time == current_time:  # an event has been scheduled for this time
-            assert current_compartment not in [Compartments.dead, Compartments.just_died]
+            assert current_compartment not in [Compartments.dead, Compartments.just_died], "Transitioning dead person"
             # decrement population count for current state
 
             self.pop_counts[current_compartment] -= 1
             # increment population count for next state
 
-            self.pop_counts[person.state[self.species].next] += 1
+            # self.pop_counts[person.state[self.species].next] += 1
 
             # if current_compartment == Compartments.L and (person.state[self.species].next in [Compartments.I, Compartments.A]):
                 # self.relapses.append(current_time)  # record relapse event -- here and not in self.update as a new infection may occur in the meantime
 
+            #start / assign relevant treatment and
             #record treatment time - to monitor recorded relapses
-            if person.state[self.species].next in [Compartments.T, Compartments.G]:
+            if person.state[self.species].next in [Compartments.T, Compartments.G]:                
+                person.assign_treatment(params, policy)
                 person.recent_treatment = current_time
 
-                #If starting G treatment, assign a treatment and new params
-                if person.state[self.species].next == Compartments.G:
-                    person.assign_G_treatment(params, policy, current_time)
+                #Check if person moved from G to T due to G6PD deficiency (treatment assigned above)
+                if (person.treatment == params.policy["blood_stage"]) and (person.state[self.species].next == Compartments.G):
+                    person.state[self.species].next = Compartments.T
+                
+                #start treatment and assign override params
+                person.start_treatment(self.species, params, current_time)
 
             #If ending G treatment, undo treatment param changes
-            if person.state[self.species].current == Compartments.G:
-                person.finish_G_treatment()
+            if person.state[self.species].current in [Compartments.T, Compartments.G]:
+                person.finish_treatment()
 
 
             # add triggering logic (triggering occurs after a pf recovery)
-            #UPDATE TRIGGERING WITH HYPNOZOITES
+            #UPDATE TRIGGERING WITH HYPNOZOITES IN FUTURE
             if params.flag_triggering_by_pf and self.species == Species.falciparum and person.state[Species.vivax].current == Compartments.L and person.state[self.species].next == Compartments.R:
                 self.triggering(person=person, current_time=current_time, event_rates=event_rates_other_sp, params=params)
 
             # continue as usual
             person.state[self.species].current = person.state[self.species].next  # transition occurs
+            self.pop_counts[person.state[self.species].next] += 1
             self.transition_table(person=person, current_time=current_time, event_rates=event_rates, params=params, treatment_policy=policy)  # identify next transition to occur
 
         else:   # check for infection event
@@ -316,7 +326,7 @@ class Disease(object):
             #     assert self.species == Species.vivax, "falciparum person is in `L`"
             #     self.infect_me(person=person, rate_infection=event_rates[Transitions.L_inf], prob_I=params.pL[self.species], params_list=params_list, policy=policy, current_time=current_time, event_rates=event_rates)
 
-        # HYNPOZOITES TRANSITIONS
+        # HYNPOZOITE TRANSITIONS
         if person.state[self.species].hypnozoites.time_next == current_time: #hypnozoite death/activation scheduled for this time
 
             current_compartment_updated = person.state[self.species].current #update current compartment in case transition occured previously
@@ -397,27 +407,32 @@ class Disease(object):
         # 0: agent can be infected by mozzies with single or mixed infection
         event_rate[Transitions.S_inf] = lamx
 
-        # 1: I -> A or death
-        event_rate[Transitions.I_next] = params.sigma[self.species]
+        # 1: I -> A or death, natural recovery/death
+        event_rate[Transitions.I_next] = params.sigma[self.species] #preceded by a check if they receive treatment
 
-        event_rate[Transitions.I_treat] = params.c[self.species] * params.tau[self.species]
+        # 2: I -> T or G
+        event_rate[Transitions.I_treat] = params.tau[self.species] #preceded by a check if they receive treatment
 
         # 3: A -> R or L
         event_rate[Transitions.A_recover] = params.alpha[self.species]
 
-        # 2: I -> T or G
         # 4: A -> T or G
-        if time >= params.mda_t1 and time < params.mda_t2:
-            event_rate[Transitions.I_treat] = params.c[self.species] * params.tau[self.species] + params.eta[self.species] + params.etaFSAT[self.species] + params.etaMDA[self.species]
+        event_rate[Transitions.A_treat] = 0
+        
 
-            event_rate[Transitions.A_treat] = params.eta[self.species] + params.etaFSAT[self.species] + params.etaMDA[self.species]
-        else:
-            if time>params.mda_t2:
-                #make sure MDA every 6 months
-                params.mda_t1 = params.mda_t1 + (365.25/2)
-                params.mda_t2 = params.mda_t2 + (365.25/2)
-            event_rate[Transitions.I_treat] = params.c[self.species] * params.tau[self.species] + params.eta[self.species] + params.etaFSAT[self.species]
-            event_rate[Transitions.A_treat] = params.eta[self.species] + params.etaFSAT[self.species]
+        #With MDA. If used in future, adjust rates and transition table
+
+        # if time >= params.mda_t1 and time < params.mda_t2:
+        #     event_rate[Transitions.I_treat] = params.c[self.species] * params.tau[self.species] + params.eta[self.species] + params.etaFSAT[self.species] + params.etaMDA[self.species]
+
+        #     event_rate[Transitions.A_treat] = params.eta[self.species] + params.etaFSAT[self.species] + params.etaMDA[self.species]
+        # else:
+        #     if time>params.mda_t2:
+        #         #make sure MDA every 6 months
+        #         params.mda_t1 = params.mda_t1 + (365.25/2)
+        #         params.mda_t2 = params.mda_t2 + (365.25/2)
+        #     event_rate[Transitions.I_treat] = params.c[self.species] * params.tau[self.species] + params.eta[self.species] + params.etaFSAT[self.species]
+        #     event_rate[Transitions.A_treat] = params.eta[self.species] + params.etaFSAT[self.species]
 
         # 5: R -> I or A
         event_rate[Transitions.R_inf] = params.r[self.species] * lamx

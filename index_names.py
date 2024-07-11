@@ -50,9 +50,12 @@ class Transitions(IntEnum):
     G_done = 11  # no longer infectious from G
 
 class Treatments(IntEnum):
-    Baseline = 0
-    CQ = 1 #Chloroquine-only
+    
+    ASMQ = 0 #Artesunate-mefloquine only
+    PG6PD = 1 #Primaquine G6PD-safe
     PLD = 2 #Primaquine Lowdose
-    PHD = 3 #Primaquine Highdose
-    PG6PD = 4 #Primaquine G6PD-safe
-    Taf = 5 #Tafenoquine
+    Taf = 3 #Tafenoquine
+
+    CQ = 4 #Chloroquine
+    Baseline = 5
+    PHD = 6 #Primaquine Highdose

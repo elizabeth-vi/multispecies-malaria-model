@@ -24,15 +24,17 @@ class model_params(object):
         """
         # simulation parameters
         self.number_events = 12
-        self.number_repeats = 1 ###### number of sims, parallelisation relevant
+        self.number_repeats = 10 ###### number of sims
+        self.number_offset = 10 #offset for simulation seed number
         self.number_pathogens = 2
         self.number_compartments = 7
 
         # set time related parameters
         self.days_in_year = 365.25
+        self.burnin_years = 5
+        duration_years = 10 #excludes burn-in
         self.time_day_start = 0
-        duration_years = 15
-        self.time_day_end = int(duration_years* self.days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
+        self.time_day_end = int((duration_years + self.burnin_years) * self.days_in_year) #Set to 1 years (previously 10 years). Add +1 or similar when used to make inclusive
         if 'time_day_step' in kwargs:
             self.time_day_step = kwargs['time_day_step']
         else:
@@ -57,11 +59,11 @@ class model_params(object):
         self.time_vec_det = self.t_det * self.time_day_step
 
         self.human_population = 1000
-        self.mozzie_human_pop_ratio = 3  # i.e. number of mosquitoes for each human
+        self.mozzie_human_pop_ratio = 1.35  # i.e. number of mosquitoes for each human
         self.period = self.days_in_year
         self.G6PD_band_ends = [0.3, 0.7, 1.0]
-        self.hyp_snapshot_years = range(5,duration_years+1)
-        self.hyp_snapshot_days = [round(year*self.days_in_year) for year in self.hyp_snapshot_years]
+        self.hyp_snapshot_years = range(int(self.burnin_years),int(duration_years+self.burnin_years)+1)
+        self.hyp_snapshot_days = [int(year*self.days_in_year) for year in self.hyp_snapshot_years] 
         self.hyp_snapshot_days[-1] += -1
 
         self.policy = {}
@@ -239,7 +241,7 @@ class model_params(object):
 
         return it_dict
 
-    def update_dict(it_dict, i1=0, i2=0,):
+    def update_dict(it_dict, i1=0, i2=0):
         #includes hard-coded parameter values: adjust
 
         it_dict = dict(it_dict)
@@ -318,16 +320,20 @@ class model_params(object):
             treat_data = json.load(treat_file)
             
         for treatment in treat_data:
-            print(treatment)
             params["treatment_params"][Treatments[treatment]]=dict()
             #Note: formatted to have value and description. Can edit treatment_params to not have "value"
-            # params[keys] = treat_data[treatment.name][keys]["value"] #RC treatment only applicable to p vivax
             for key in treat_data[treatment]:
                 params["treatment_params"][Treatments[treatment]][key] = treat_data[treatment][key]["value"] #RC treatment only applicable to p vivax
-            # params.treatment_params[treatment]
-            print(params["treatment_params"][Treatments[treatment]])
+                
+                #If key (e.g. adherence) also exists in scenario, override with scenario-specific value
+                if key in prov_data[prov]:
+                    if treatment in prov_data[prov][key]:
+                        params["treatment_params"][Treatments[treatment]][key] = prov_data[prov][key][treatment]
+            # print(treatment)
+            # print(params["treatment_params"][Treatments[treatment]])
 
         ics = params['ics']
         del params['ics']
 
         return params, ics
+

@@ -101,7 +101,7 @@ class Agent(object):
     """
     individuals in the human population
     """
-    __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'transition_overrides', 'G_treatment', 'param_overrides', "recent_treatment"
+    __slots__ = 'state', 'memory', 'sex', 'G6PD_level', 'treatment', 'transition_overrides', 'param_overrides', "recent_treatment"
 
     def __init__(self, transition_time, params):
         """
@@ -149,59 +149,47 @@ class Agent(object):
         
         self.G6PD_level = G6PD_level
 
-        #Treatment is a subclass of "G"
-        self.G_treatment = None
-
+        # self.c = np.random.binomial(1,params.pTreat[Species.vivax]) 
+        # self.pTreat = params.pTreat #Vivax-specific - recode if differing species coverage
+        self.treatment = None
 
         #Override population default transition if a particular value is set here
-        # Ie transition_overrides[Transitions.L_whatever] = 0.4
         self.transition_overrides = {}
         self.param_overrides = {}
 
     #For radical cure treatment specifically
-    def start_G_treatment(self, species, params, treatment, current_time):
+    def start_treatment(self, species, params, current_time):
 
-        assert species == Species.vivax
+        assert species == Species.vivax, "Treating falciparum"
 
-        if treatment == Treatments.Baseline:
-            return
-        # G_params = ["pTfP", "pP", "psi","pG","pN","c","p_rad"] #List of potential parameters that will change with varying radical cure treatment
-        # G_params = ["pTfP", "pP", "psi","pG","p_rad"] #List of potential parameters that will change with varying radical cure treatment
-
-        self.G_treatment = treatment
+        treatment = self.treatment
         treatment_params = params.treatment_params[treatment]
 
-        #Rate out of G for specified treatment
-        # self.transition_overrides[Transitions.G_done] = params[treatment].psi[species]
-
-
-        self.transition_overrides[Transitions.G_done] = treatment_params["psi"][species]
-        
+        if self.state[species].next == Compartments.T:
+            self.transition_overrides[Transitions.T_done] = treatment_params["rho"][species]
+        elif self.state[species].next == Compartments.G:
+            bloodstage_psi = params.treatment_params[params.policy["blood_stage"]]["rho"][species]
+            self.transition_overrides[Transitions.G_done] = min(treatment_params["psi"][species],bloodstage_psi)
+            #Treat hypnozoites
+            self.state[species].hypnozoites.treat(treatment_params["p_rad"], current_time)
+        else:
+            print("Error, starting treatment for someone not being given treatment")
+            
         #Add params to override defaults
-        # for param in G_params:
-        #     self.param_overrides[param] = getattr(params[treatment],param)
         for param in treatment_params:
             self.param_overrides[param] = treatment_params[param]
 
-            if param == "pG":
+            if param == "pG": #add in haemolysis-induced death
                 if self.G6PD_level < treatment_params["haem_threshold"]:
                     self.param_overrides[param] = np.add(treatment_params[param],treatment_params["p_haem"]*params.p_haem_death).tolist()
 
-        #Treat hypnozoites
-        # self.state[species].hypnozoites.treat(params[treatment].p_rad, current_time)
-        self.state[species].hypnozoites.treat(treatment_params["p_rad"], current_time)
 
 
-    def finish_G_treatment (self):
+    def finish_treatment(self):
 
-        # G_params = ["pTfP", "pP", "psi","pG","pN","c"] #List of potential parameters that will change with varying radical cure treatment
-
-        # del self.transition_overrides[Transitions.G_done]
-        # for param in G_params:
-        #     del self.param_overrides[param]
         self.transition_overrides = {}
         self.param_overrides = {}
-        self.G_treatment = None
+        self.treatment = None
         
 
     def G6PD_test(self):
@@ -236,28 +224,33 @@ class Agent(object):
         else: #normal
             test_res = 1
 
-        return test_res
-        
+        return test_res  
 
     
-    def assign_G_treatment(self, params, policy, current_time):
+    def assign_treatment(self, params, policy):
         """
-        Assign and commence radical cure treatment, based on current treatment policy and G6PD status
+        Assign and commence treatment, based on current treatment policy and G6PD status
         """
 
-        treatment = self.choose_treatment(policy)
-        self.start_G_treatment(species=Species.vivax, params=params, treatment=treatment, current_time=current_time)
+        treatment = self.choose_treatment(params, policy)
+        self.treatment = treatment
 
-
-    def choose_treatment(self,policy):
-
-        G6PD_test = self.G6PD_test()
-        for i in range(len(policy["G6PD_maxes"])):
-            if G6PD_test <= policy["G6PD_maxes"][i]:
-                return policy["treatments"][i]
-        
-        print("Error: Policy "+str(policy)+" is not listed")
-        quit()
+    def choose_treatment(self, params, policy):
+        if self.state[Species.vivax].next == Compartments.T: #if given blood-stage
+            return policy["blood_stage"]
+        else: #recommended radical cure
+            G6PD_test = self.G6PD_test()
+            sex = self.sex
+            for i in range(len(policy["treatments"])):
+                if G6PD_test <= policy["G6PD_maxes"][sex][i]:
+                    G_treatment = policy["treatments"][i]
+                    
+                    #check adherence
+                    p_adherence = params.treatment_params[G_treatment]["adherence"]
+                    if random.random() < p_adherence:
+                        return G_treatment
+                    else:
+                        return policy["blood_stage"]                            
                          
                          
                          

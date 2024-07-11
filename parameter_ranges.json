@@ -234,7 +234,7 @@
         ],
         "exp": [
             0.33,
-            0.33
+            0.000000001
         ],
         "max": [
             0.33,
@@ -357,7 +357,7 @@
         ],
         "exp": [
             0.142,
-            0.025
+            0.00000001
         ],
         "max": [
             0.5,
@@ -420,7 +420,7 @@
         ],
         "exp": [
             0.036,
-            0.036
+            0.00
         ],
         "max": [
             0.1,
@@ -460,7 +460,7 @@
         ],
         "exp": [
             0.16,
-            0.16
+            0.0
         ],
         "max": [
             0.33,
@@ -473,26 +473,26 @@
         "level": "global",
         "symbol": "$\\zeta_T$"
     },
-    "c": {
+    "pTreat": {
         "min": [
             0.0,
             0.0
         ],
         "exp": [
-            0.3,
-            0.3
+            0.606,
+            0.606
         ],
         "max": [
             1.0,
             1.0
         ],
-        "description": "treatment coverage level",
+        "description": "probability of receiving treatment",
         "units": "Unitless",
-        "source": "Assumption",
+        "source": "\\cite{yasuoka_malaria_2018}",
         "location": "",
         "level": "species_dependent_local",
-        "symbol": "$c$",
-        "note": "This is number of tests conducted * proportion that came back positive, by species. This is currently $\\tau_{SEV}\\times p_{SEV}=0.024(0.0, 0.25)$ from \\cite{silal_malaria_2019}."
+        "symbol": "$p_{treat}$",
+        "note": "Proportion of fever cases that sought treatment during pregnancy"
     },
     "eta": {
         "min": [
@@ -576,7 +576,7 @@
         ],
         "exp": [
             0.0066,
-            6e-06
+            1e-06
         ],
         "max": [
             0.075,
@@ -597,7 +597,7 @@
         ],
         "exp": [
             0.0066,
-            0.0038
+            1e-06
         ],
         "max": [
             0.075,

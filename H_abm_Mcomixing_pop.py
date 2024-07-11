@@ -12,6 +12,7 @@ import json
 import os
 from copy import copy
 from collections import defaultdict
+from functools import partial
 
 
 # import classes I've written
@@ -26,10 +27,10 @@ class Run_Simulations(object):
     def __init__(self, params, ics, **kwargs):
         #calibrated_params, self.ics = model_params.use_calibrated_params(prov=prov_name, file=prov_file)
 
-        self.ics = ics
+        self.ics = copy(ics)
 
         #params.update(**kwargs)
-        self.params = params
+        self.params = copy(params)
         #self.params = model_params(**params)
         #calibrated_params.update(**kwargs)
         #self.params = model_params(**calibrated_params)
@@ -76,6 +77,7 @@ class Run_Simulations(object):
         for idx in range(self.params.number_pathogens):
             diseases[idx].pop_counts[person.state[idx].current] -= 1  # decrement count
             person.state[idx].current = Compartments.dead
+            diseases[idx].pop_counts[person.state[idx].current] += 1  # increment count
             person.state[idx].next = Compartments.dead
             person.state[idx].time = self.params.time_end + 2  # i.e. never
             #Update hypnozoite transition time too
@@ -175,12 +177,15 @@ class Run_Simulations(object):
                     # update vivax status
                     humans[agent_counter].state[Species.vivax].current = pv_cmp
 
-                    #Assign treatment for those in G
+                    #Assign treatment for those in T and G
                     if pv_cmp == Compartments.G:
                         if humans[agent_counter].G6PD_level is None:
                             humans[agent_counter].state[Species.vivax].current = Compartments.T #Replace T with G
                         else:
-                            humans[agent_counter].assign_G_treatment(params,policy,current_time=self.params.time_start)
+                            humans[agent_counter].assign_treatment(params,policy)
+                    if pv_cmp == Compartments.T:
+                        humans[agent_counter].treatment = policy["blood_stage"]
+
 
 
                     diseases[Species.vivax].transition_table(person=humans[agent_counter], current_time=self.params.time_start,
@@ -303,7 +308,14 @@ class Run_Simulations(object):
 
         return n_hyp_array
 
-    def run_me(self, time_changes, params_list, baseline_file_bool, num_repeats):
+    def run_me(self, time_changes, params_list, baseline_file_bool, offset, num_repeats):
+
+        seed_num = num_repeats+offset
+
+        random.seed(seed_num)
+        Agent.random = random
+        Disease.random = random
+        np.random.seed(seed_num)
 
         """
         :param num_repeats: number of repeats, needed for multiprocessing even though not used
@@ -332,7 +344,7 @@ class Run_Simulations(object):
         deaths_owing = 0
         ########################################################################
 
-        print("Number of repeats = "+str(num_repeats))
+        print("Seed number = "+str(seed_num))
 
         # popn=self.params.human_population redundant
 
@@ -440,15 +452,13 @@ class Run_Simulations(object):
 
             print('range is '+str(start)+' to '+str(end))
 
-            self.params = params_list[scenario_i]
+            self.params = copy(params_list[scenario_i])
+            if start < end + 1:
+                self.params.human_population = sum(human_pop_pv_history[start-1][:Compartments.just_died]) #update human pop when param switches
 
             for t in range(start,end):  
-                #if t==2:
-                    #print("\nt = "+str(t))
-                    #print("Quitting for testing purposes, line 338")
-                    #quit()
-                # if (t % 100 == 0):
-                #     print("t = " + str(t))
+                if (t % 100 == 0):
+                    print("t = " + str(t))
 
                 if self.params.FSAT == True:
                     possible_detections = human_pop_pf_history[t - 1][1] + human_pop_pf_history[t - 1][2] + \
@@ -723,7 +733,7 @@ def convert(o):
     if isinstance(o, np.generic): return int(o)
     raise TypeError
 
-def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseline_file=False):
+def do_iterate(params_list, it_dict_list, ics, scenario, time_changes, in_parallel, baseline_file=False):
 
     params_start = params_list[0] #baseline params
     it_dict_start = it_dict_list[0] #baseline it_dict
@@ -731,9 +741,14 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
     # it_dict_changed = it_dict_list[scenario_i] #it_dict after treatment change
     # params = params_changed #Use these as default params
 
-    policy = params_list[-1].policy["treatments"][-1]
+    if params_list[-1].policy["treatments"][0]==Treatments.ASMQ:
+        policy = Treatments.Baseline
+    elif time_changes:
+        policy = params_list[-1].policy["treatments"][-1] #ending policy for G6PD normal people
+    else:
+        policy = Treatments.Baseline
     print("\n************************************")
-    print("Treatment: "+str(policy.name))
+    print("Treatment: "+str(policy.name)+"_"+scenario)
     print("************************************\n")
 
 
@@ -812,8 +827,7 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
         # parallelised
         if in_parallel==False:
             start = time.time()
-            print(human_pv)
-            for f in [Run_Simulations(params_start, ics, **it_dict_start).run_me(time_changes, params_list, baseline_bool, x) for x in range(params_start.number_repeats)]:
+            for f in [Run_Simulations(params_start, ics).run_me(time_changes, params_list, baseline_bool, params_start.number_offset, x) for x in range(params_start.number_repeats)]:
 
                 # if baseline_bool:
                 if False:
@@ -860,28 +874,30 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
                     hyp_dist.append(f[14])
         else:
             start = time.time()
-
-            print("Error: parallelised code incomplete")
-            quit()
-        
             with concurrent.futures.ProcessPoolExecutor() as executor:
 
-                results_test = executor.map(Run_Simulations(params, ics).run_me, range(params.number_repeats))
+                results_test = executor.map(partial(Run_Simulations(params_start, ics).run_me, time_changes, params_list, baseline_bool, params_start.number_offset),range(params_start.number_repeats))
 
                 for f in results_test:
                     human_pf.append(f[0])
                     human_pv.append(f[1])
                     human_mixed_infectious.append(f[2])
-                    mozzie_pf_infectious.append([f[3][idx][Species.falciparum]+f[3][idx][Species.mixed] for idx in range(params.time_end)])
-                    mozzie_pv_infectious.append([f[3][idx][Species.vivax]+f[3][idx][Species.mixed] for idx in range(params.time_end)])
-                    mozzie_mixed_infectious.append([f[3][idx][Species.mixed] for idx in range(params.time_end)])
+                    mozzie_pf_infectious.append([f[3][idx][Species.falciparum]+f[3][idx][Species.mixed] for idx in range(params_start.time_end)])
+                    mozzie_pv_infectious.append([f[3][idx][Species.vivax]+f[3][idx][Species.mixed] for idx in range(params_start.time_end)])
+                    mozzie_mixed_infectious.append([f[3][idx][Species.mixed] for idx in range(params_start.time_end)])
                     mozzie_all.append(f[4])
                     pf_outcomes.append(f[5])
                     pv_outcomes.append(f[6])
-                    # relapses.append(f[7])
-                    human_agents.append(f[7])
-                    mozzie_info.append(f[8])
-                    num_TGD.append(f[9])
+                    pf_actual_relapses.append(f[7][0])
+                    pv_actual_relapses.append(f[7][1])
+                    pf_recorded_relapses.append(f[8][0])
+                    pv_recorded_relapses.append(f[8][1])
+                    human_agents.append(f[9])
+                    mozzie_info.append(f[10])
+                    num_TGD.append(f[11])
+                    G6PD_hypnozoites.append(f[12])
+                    num_G6PD.append(f[13])
+                    hyp_dist.append(f[14])
 
         end = time.time()  # for timing the code
         print('finished in: ' + str(end - start) + 'seconds')
@@ -889,8 +905,8 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
         print('Finished stochastic runs')
 
         outfilename = "./stored/results_not_entangled/" #Modified from "all_things" to "not_entangled"
-        tangled_folder_variables = "./stored/results_variables/duration_"+str(int(params_start.time_day_end))+"_"+str(os.getpid())+"/"
-        tangled_folder_iterate = "./stored/results_iterate/duration_"+str(int(params_start.time_day_end))+"_"+str(os.getpid())+"/"
+        tangled_folder_variables = "./stored/results_variables/duration"+str(int(params_start.time_day_end))+"_sims"+str(params_start.number_repeats)+"_offset"+str(params_start.number_offset)+"/"
+        tangled_folder_iterate = "./stored/results_iterate/duration"+str(int(params_start.time_day_end))+"_sims"+str(params_start.number_repeats)+"_offset"+str(params_start.number_offset)+"/"
 
         try:
             os.makedirs(tangled_folder_variables, exist_ok = True)
@@ -912,10 +928,10 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
             print("No treatment entanglement")
 
         if treatment_entangled == True:
-            with open(tangled_folder_variables + policy.name + '_timechange' + str(time_changes) + "_duration" + str(int(params_start.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + policy.name + "_" + scenario + '_timechange' + str(time_changes) + "_duration" + str(int(params_start.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
         else:
-            with open(tangled_folder_variables + policy.name + ".json", 'w') as outfile:
+            with open(tangled_folder_variables + policy.name + "_" + scenario + ".json", 'w') as outfile:
                 json.dump(results, outfile, indent=4, default=convert)
 
         # store interesting values
@@ -929,8 +945,8 @@ def do_iterate(params_list, it_dict_list, ics, time_changes, in_parallel, baseli
         iterate_results = {'max_pf': max_values_f, 'max_pv': max_values_v, 'average_pf': av_values_f, 'average_pv': av_values_v, 'min_pf': min_values_f, 'min_pv': min_values_v, 'iterate': it_dict_start}
 
         if treatment_entangled == True:
-            with open(tangled_folder_iterate + policy.name + '_timechange' + str(time_changes) + "_duration" + str(int(params_start.time_day_end)) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + policy.name + "_" + scenario + '_timechange' + str(time_changes) + "_duration" + str(int(params_start.time_day_end)) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
         else:
-            with open(tangled_folder_iterate + policy.name + '_' + "_c" + str(it_dict_start['c'][0]) + ".json", 'w') as outfile:
+            with open(tangled_folder_iterate + policy.name + "_" + scenario + '_' + "_c" + str(it_dict_start['c'][0]) + ".json", 'w') as outfile:
                 json.dump(iterate_results, outfile, indent=4, default=convert)
